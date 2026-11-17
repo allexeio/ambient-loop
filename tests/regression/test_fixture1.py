@@ -58,3 +58,22 @@ def test_balance_closed(run):
     _p, _i, led, _s, _b = run
     assert max(led.residuals().values()) < 1e-6
     assert np.isfinite(led.total_elec()).all()
+
+
+def test_section_9_2_regression(run):
+    """Brief §9.2: simplified assumptions, ±3 %. 'No changeover' is reported, not asserted (definition differs)."""
+    from ambient_loop.arrangements import archetypes as A
+    from ambient_loop.reporting.full_summary import run_case
+    from ambient_loop.sim.inputs import build_full_inputs
+    from ambient_loop.validation.fixture1 import REGRESSION, simplified_basis
+
+    project, _i, _l, _s, base = run
+    inp, prof, _w, _f = build_full_inputs(project, base)
+    sb = simplified_basis()
+    cases = {"A1": A.a1_shared_loop(sb), "A5": A.a5_cascade(sb), "A4": A.a4_hr_dhw_source(sb, True),
+             "A3": A.a3_hr_preheat(sb), "A2+3-store60": A.a23_buffer_preheat(sb, volume_m3=28.7, store_C=60.0)}
+    for k, arr in cases.items():
+        c = run_case(project, arr, inp, prof)
+        e, r = REGRESSION[k]
+        assert c.electricity_MWh == pytest.approx(e, rel=0.03), k
+        assert c.system.value == pytest.approx(r, rel=0.03), k

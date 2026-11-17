@@ -118,16 +118,29 @@ def import_workbook(path: Path, mapping_path: Path) -> ImportedWorkbook:
         r = _find_label(ins, lc, pat)
         ref = f"{vc}{r}"
         params[name] = (_num(ins, ref), f"{ins.title}!{ref}")
+    for name, pat in m["inputs"].get("optional_params", {}).items():
+        try:
+            r = _find_label(ins, lc, pat)
+            params[name] = (_num(ins, f"{vc}{r}"), f"{ins.title}!{vc}{r}")
+        except WorkbookError:
+            continue
 
     curves: dict[str, tuple[list[float], list[float], str]] = {}
     for name, spec in m["inputs"].get("curves", {}).items():
-        r = _find_label(ins, lc, spec["header_label"])
+        try:
+            r = _find_label(ins, lc, spec["header_label"])
+        except WorkbookError:
+            if name == "ashp_heating_cop":
+                raise
+            continue
         ycol = next(
             (c for c in range(1, ins.max_column + 1)
              if re.search(spec["y_header"], str(ins.cell(r, c).value or "").strip(), re.I)),
             None,
         )
         if ycol is None:
+            if name != "ashp_heating_cop":
+                continue
             raise WorkbookError(f"{ins.title} row {r}: no column /{spec['y_header']}/")
         xs: list[float] = []
         ys: list[float] = []
@@ -179,10 +192,37 @@ def write_project(imp: ImportedWorkbook, out_dir: Path, name: str) -> Path:
         return {"value": v, "tag": "project_data", "ref": f"{imp.source} {ref}"}
 
     cx, cy, cref = imp.curves["ashp_heating_cop"]
+    hx, hy, href = imp.curves.get("ashp_heating_kW", (cx, [1.0] * len(cx), cref))
+    rated = max(hy)
+    site = {
+        "lthw_flow_C": 45.0, "lthw_return_C": 40.0, "chw_flow_C": 10.0, "chw_return_C": 16.0,
+        "dhw_store_C": p["dhw_store_C"][0] if "dhw_store_C" in p else 65.0,
+        "cooling_count": int(p["wshp_count"][0]) if "wshp_count" in p else 3,
+        "cooling_unit_kW": p["wshp_heat_kW"][0] if "wshp_heat_kW" in p else 326.0,
+        "dhw_count": int(p["dhw_count"][0]) if "dhw_count" in p else 3,
+        "dhw_unit_kW": p["dhw_unit_kW"][0] if "dhw_unit_kW" in p else 220.0,
+        "ashp_count": int(p["ashp_count"][0]) if "ashp_count" in p else 4,
+        "ashp_unit_kW": rated,
+        "ashp_model": {"type": "map", "tag": "manufacturer_data", "ref": f"{imp.source} {cref} / {href}",
+                       "params": {"src_axis": cx, "snk_axis": [25.0], "cop_grid": [[c] for c in cy],
+                                  "cap_grid": [[h / rated] for h in hy]}},
+        "ashp_cooling_unit_kW": p["ashp_cool_kW"][0] if "ashp_cool_kW" in p else 700.0,
+        "dry_cooler_kW": p["dc_capacity_kW"][0],
+        "dry_cooler_fan_kW": p["dc_fan_kW"][0] + p.get("dc_pump_kW", (0.0, ""))[0] if "dc_fan_kW" in p else 80.0,
+        "dry_cooler_itd_K": 8.0,
+        "calorifier_m3": p["calorifier_l"][0] / 1000 if "calorifier_l" in p else 0.0,
+        "buffer_m3": max(p["buffer_l"][0] / 1000, 10.0) if "buffer_l" in p else 10.0,
+    }
     project: dict[str, Any] = {
         "name": name,
         "description": f"Imported from {imp.source} (workbook-compatible simple mode).",
         "mode": "simple",
+        "mains_water_C": {"value": p["mains_C"][0], "tag": "assumption", "ref": f"{imp.source} {p['mains_C'][1]}"}
+        if "mains_C" in p else 10.0,
+        "site": site,
+        "archetypes": [],
+        "targets": [{"service": "DHW", "seasonal_ratio": 3.0}, {"service": "LTHW", "seasonal_ratio": 4.0},
+                    {"service": "CHW", "seasonal_ratio": 6.44}],
         "loads": {"file": "loads.csv"},
         "weather": {"file": "weather.csv", "format": "table", "dry_bulb_column": "dry_bulb_C"},
         "streams": [

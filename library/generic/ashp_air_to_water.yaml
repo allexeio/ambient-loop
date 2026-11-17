@@ -1,0 +1,17 @@
+id: ashp_air_to_water
+label: Air-to-water heat pump, inverter scroll, packaged rooftop
+type: air_source
+tag: generic
+eta: 0.45
+approach_evap_K: 8.0
+approach_cond_K: 2.0
+cap_per_K_src: 0.02
+rated_src_C: 7.0
+defrost_band_C: [-3.0, 5.0]
+defrost_derate: 0.10
+envelope: {src_lvg_C: [-20, 35], snk_lvg_C: [20, 60]}
+part_load: {plr: [0.25, 0.5, 0.75, 1.0], mult: [1.0, 1.06, 1.04, 1.0], plr_min: 0.25, cd: 0.9}
+ref: >
+  The source temperature is outdoor dry bulb. T_e = T_db − 8 K air approach. The fixture
+  rooftop map (25 °C LWT, −5 to 10 °C) gives η 0.43–0.47 on this basis. Defrost derate per
+  A-021.

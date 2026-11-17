@@ -67,17 +67,27 @@ def allocate_pro_rata(project: Project, ledger: Ledger) -> Allocated:
 
     for cid, info in ledger.components.items():
         w = ledger.elec[cid]
-        if info.role is Role.UNIT:
+        if info.service_weights is not None:
+            tot = np.sum(list(info.service_weights.values()), axis=0)
+            for svc, wt in info.service_weights.items():
+                share = _safe_share(wt, tot)
+                orphan = np.where(tot > 0, 0.0, 1.0 / len(info.service_weights))
+                out.setdefault(svc, np.zeros(HOURS))
+                out[svc] += w * (share + orphan)
+        elif info.role is Role.UNIT:
             demand = {sid: np.abs(ledger.flow(cid, f"svc:{sid}")) for sid in info.serves}
             total = np.sum(list(demand.values()), axis=0)
             for sid, q in demand.items():
                 out[streams[sid].service_name] += w * _safe_share(q, total)
-        elif info.role is Role.DEFICIT:
-            for sid, e in heat_ex.items():
-                out[streams[sid].service_name] += w * _safe_share(e, tot_ex)
-        elif info.role is Role.SURPLUS:
-            for sid, r in cool_rej.items():
-                out[streams[sid].service_name] += w * _safe_share(r, tot_rej)
+        elif info.role in (Role.DEFICIT, Role.SURPLUS):
+            basis, tot = (heat_ex, tot_ex) if info.role is Role.DEFICIT else (cool_rej, tot_rej)
+            for sid, e in basis.items():
+                out[streams[sid].service_name] += w * _safe_share(e, tot)
+            # hours with no basis (e.g. rejecting only pump heat): share equally, stays visible
+            orphan = np.where(tot > 0, 0.0, w)
+            if np.abs(orphan).max() > 0:
+                for svc in services:
+                    out[svc] += orphan / len(services)
     _check_sum(out, ledger, "pro_rata")
     return Allocated(Allocation.PRO_RATA, out)
 

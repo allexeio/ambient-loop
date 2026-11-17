@@ -44,3 +44,18 @@ def build_inputs(
     profile = classify_dhw(np.sum(dhw, axis=0)) if dhw else DhwProfile.IMPORTED
     files = sorted({lp, wp})
     return SimpleInputs(demand_kW=demand, dry_bulb_C=db), profile, warnings, files
+
+
+def build_full_inputs(project: Project, base: Path) -> tuple["FullInputs", DhwProfile, list[Warning_], list[Path]]:
+    """Inputs for full mode: adds mains water temperature and any extra load-table columns."""
+    from ambient_loop.core.series import as_hourly
+    from ambient_loop.sim.full_mode import FullInputs
+
+    si, profile, warns, files = build_inputs(project, base)
+    mw = project.mains_water_C
+    mains = as_hourly(mw if isinstance(mw, list) else mw.value)
+    lp = base / project.loads.file
+    df = to_model_year(read_table(lp, project.loads.sheet, project.loads.header_row), project.loads.drop_feb29,
+                       source=lp.name)
+    cols = {c: df[c].to_numpy(dtype=np.float64) for c in df.columns if np.issubdtype(df[c].dtype, np.number)}
+    return FullInputs(si.demand_kW, si.dry_bulb_C, mains, None, cols), profile, warns, files

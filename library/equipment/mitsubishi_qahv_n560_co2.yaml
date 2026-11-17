@@ -1,0 +1,24 @@
+id: mitsubishi_qahv_n560_co2
+label: CO₂ air-to-water hot water heat pump, 40 kW (Mitsubishi Electric QAHV-N560YA-HPB), calibrated model
+type: co2
+tag: manufacturer_data
+unit_capacity_kW: 40.0
+cop_ref: 3.65
+t_in_ref: 9.0
+t_src_ref: 7.0
+t_out_ref: 65.0
+k_in: 0.0096
+k_in2: 0.0300
+t_knee: 29.0
+k_src: 0.0168
+k_out: 0.010
+envelope: {src_lvg_C: [-25, 43], snk_lvg_C: [55, 90]}
+part_load: {plr: [0.25, 0.5, 0.75, 1.0], mult: [0.95, 1.0, 1.0, 1.0], plr_min: 0.25, cd: 0.9}
+source_document: >
+  QAHV-N560YA-HPB flyer (Mitsubishi Electric Australia, 2021) and UK data sheet, as quoted in
+  web search results on 17 Nov 2026. Rating points: 16 °CDB/12 °CWB, 17→65 °C: 40.0 kW,
+  10.31 kW input, COP 3.88. 7 °CDB/6 °CWB, 9→65 °C: 40.0 kW, 11.0 kW input, COP 3.65.
+  7 °CDB, 15→65 °C: COP 3.44. Inlet range 5–63 °C, outlet 55–90 °C. The full Data Book was not
+  reachable from this environment (network policy), so the in-between values are a fitted
+  correlation, not a manufacturer map [A-022, A-023].
+selection_conditions: {fluid: water, rating: "EN 14511 / JIS"}

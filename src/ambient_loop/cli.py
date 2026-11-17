@@ -111,6 +111,50 @@ def recovery(project_file: Path, out: Path | None = None) -> None:
     typer.echo(f"  coincidence factor                 {s.coincidence:>10.3f}")
 
 
+@app.command()
+def scenarios(project_file: Path, ids: str = typer.Option("", help="comma-separated archetype ids; default: project list or all"),
+              out: Path | None = None, workers: int = 0) -> None:
+    """Full-physics comparison of arrangements, with rules engine and HTML report."""
+    from ambient_loop.arrangements.archetypes import ARCHETYPES
+    from ambient_loop.reporting.scenario_report import scenario_report
+    from ambient_loop.scenarios.run import arrangements_for, load_context, run_many
+
+    t0 = time.perf_counter()
+    ctx = load_context(project_file)
+    chosen = [i for i in ids.split(",") if i] or ctx.project.archetypes or list(ARCHETYPES)
+    arrs = arrangements_for(ctx, chosen)
+    cases = run_many(project_file, arrs, workers or None, ctx)
+    out = out or ctx.base / "outputs"
+    out.mkdir(parents=True, exist_ok=True)
+    man = manifest(ctx.project.model_dump(mode="json"), [project_file, *ctx.files])
+    rec = ctx.recovery
+    line = (f"Recovery screening: {rec.annual_MWh['Direct (HX only)']:,.0f} MWh/yr direct, "
+            f"{rec.annual_MWh['Heat-pump assisted (delivered)']:,.0f} MWh/yr heat-pump assisted, coincidence "
+            f"{rec.coincidence:.2f}.")
+    html_ = scenario_report(ctx.project, cases, [f"run {man['config_hash']}", man["timestamp_utc"],
+                                                 f"code {man['code_version']} ({man['git_sha']})"], line)
+    (out / "scenarios.html").write_text(html_)
+    rows = [c.row() for c in sorted(cases, key=lambda c: c.electricity_MWh)]
+    (out / "scenarios.json").write_text(json.dumps({"manifest": man, "cases": rows,
+        "findings": {c.arrangement.id: [f.__dict__ for f in c.findings] for c in cases}}, indent=2, default=str))
+    typer.echo(f"{ctx.project.name}: {len(cases)} arrangements in {time.perf_counter() - t0:.1f} s -> {out}")
+    for r in rows:
+        typer.echo(f"  {r['id']:<14} {r['electricity_MWh']:>8,.1f} MWh/yr  ratio {r['system_ratio']:.2f}  {r['title']}")
+
+
+@app.command("parse-equipment")
+def parse_equipment(pdf: Path, model_id: str, label: str = "", out: Path | None = None) -> None:
+    """Parse a manufacturer selection PDF into a library YAML candidate for review."""
+    from ambient_loop.io.equipment_pdf import parse_pdf, write_library
+
+    ex = parse_pdf(pdf)
+    out = out or Path("library/equipment") / f"{model_id}.yaml"
+    write_library(ex, out, model_id, label or model_id)
+    typer.echo(f"Wrote {out} (review_required). Fields: {sorted(ex.fields)}; table rows: {len(ex.table)}")
+    for w in ex.warnings:
+        typer.echo(f"WARNING {w}")
+
+
 @app.command("inspect-workbook")
 def inspect_cmd(workbook: Path, rows: int = 8) -> None:
     """Print sheets and first rows of a workbook (to build a mapping for a new layout)."""

@@ -41,10 +41,26 @@ inputs:
     dc_elec_ratio: 'Dry cooler electrical input per kW rejected'
     dc_cutoff_C: 'Outdoor screening cutoff'
     time_step_h: 'Time-step duration'
+  optional_params:   # used for the full-mode site basis when present
+    ashp_count: 'Rooftop ASHP installed quantity'
+    wshp_count: 'LTHW / CHW WSHP installed quantity'
+    dhw_count: '^DHW WSHP duty quantity$'
+    wshp_heat_kW: 'CXWF heating output per unit'
+    dhw_unit_kW: 'gross heating output per unit'
+    ashp_cool_kW: 'CXAF cooling output per unit'
+    dc_fan_kW: '^Rated fan electrical input$'
+    dc_pump_kW: 'Estimated rated pump input'
+    dhw_store_C: 'Temperature of entered DHW volume'
+    mains_C: '^Cold-water temperature$'
+    calorifier_l: 'Total DHW storage'
+    buffer_l: 'DHW primary buffer'
   curves:
     ashp_heating_cop:
       header_label: '^Outdoor C$'   # row holding the curve headers; x in label column
       y_header: '^Gross COP$'
+    ashp_heating_kW:
+      header_label: '^Outdoor C$'
+      y_header: '^Heat output kW$'
 results:
   sheet: Results
   label_column: A

@@ -44,6 +44,8 @@ class ComponentInfo:
     role: Role
     tags: set[Tag] = field(default_factory=set)
     serves: list[str] = field(default_factory=list)  # stream ids, for units
+    # hourly allocation weights by service (normalised per hour by the allocator)
+    service_weights: dict[str, FloatArray] | None = None
 
 
 @dataclass
@@ -55,6 +57,8 @@ class Ledger:
     flags: dict[str, np.ndarray] = field(default_factory=dict)  # name -> bool[8760]
     # derived hourly quantities for reporting (not part of conservation), e.g. loop:reused
     derived: dict[str, FloatArray] = field(default_factory=dict)
+    # energy stored by a component in each hour (ΔU, kWh); Σ flows out = W − ΔU
+    stored: dict[str, FloatArray] = field(default_factory=dict)
 
     def add_component(self, info: ComponentInfo) -> None:
         if info.id in self.components:
@@ -99,8 +103,9 @@ class Ledger:
         for cid, info in self.components.items():
             if info.role is Role.UNMET:
                 continue
+            du = self.stored.get(cid, 0.0)
             res[f"component:{cid}"] = float(
-                np.max(np.abs(self.component_net(cid) - self.elec[cid]))
+                np.max(np.abs(self.component_net(cid) - self.elec[cid] + du))
             )
         return res
 

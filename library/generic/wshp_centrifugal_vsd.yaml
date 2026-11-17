@@ -1,0 +1,10 @@
+id: wshp_centrifugal_vsd
+label: Water-cooled chiller / heat pump, centrifugal with VSD (R1234ze/R514A)
+type: carnot
+tag: generic
+eta: 0.55
+approach_evap_K: 1.5
+approach_cond_K: 1.5
+envelope: {src_lvg_C: [3, 25], snk_lvg_C: [18, 55]}
+part_load: {plr: [0.25, 0.5, 0.75, 1.0], mult: [0.92, 1.08, 1.06, 1.0], plr_min: 0.15, cd: 0.9}
+ref: "Large centrifugal machines sit at the upper end of the 0.5–0.6 second-law band (ASHRAE Handbook HVAC Systems & Equipment 2020 ch. 43) [Assumption A-030]."

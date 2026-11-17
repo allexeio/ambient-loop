@@ -1,0 +1,6 @@
+id: electric
+label: Direct electric (immersion / electric boiler)
+type: fixed
+tag: generic
+cop: 1.0
+ref: "Resistance heating, COP 1 by definition."

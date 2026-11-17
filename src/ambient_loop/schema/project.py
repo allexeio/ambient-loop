@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from enum import StrEnum
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
 import yaml
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -197,7 +197,7 @@ class Target(_Strict):
 class Project(_Strict):
     name: str
     description: str = ""
-    mode: Literal["simple"] = "simple"
+    mode: Literal["simple", "full"] = "simple"
     loads: LoadsSource
     weather: WeatherSource
     mains_water_C: TaggedFloat | list[float] = TaggedFloat(value=10.0)
@@ -205,6 +205,12 @@ class Project(_Strict):
     plant: SimplePlant
     targets: list[Target] = []
     recovery: RecoverySettings = RecoverySettings()
+    # full mode
+    site: dict[str, Any] = {}  # SiteBasis fields (temperatures, plant selections)
+    archetypes: list[str] = []  # archetype ids to run; empty = let the generator choose
+    arrangements: list[dict[str, Any]] = []  # inline Arrangement definitions
+    healthcare: bool = False  # HSG274 55 °C distribution limit
+    capex: dict[str, float] = {}  # overrides for the capital-proxy cost table
 
     @model_validator(mode="after")
     def _check_refs(self) -> Project:
