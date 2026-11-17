@@ -16,6 +16,8 @@ INCREMENTAL:
   - heat services carry the rest: total minus cooling stand-alone, split in proportion to
     their pro-rata electricity
     [Assumption A-010: the brief does not say how to split the remainder between heat services]
+  - in an hour with no heat service, cooling carries the actual electricity (there is no heat
+    to charge the difference to)
 
 ISOLATED (a reference, not an allocation of this system's electricity): each service run on
 its own with no reuse and no dry cooler, i.e. the pro-rata allocation of the

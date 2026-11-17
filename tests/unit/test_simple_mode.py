@@ -87,7 +87,8 @@ def test_conservation_and_allocation_sums(reuse, lthw, chw, dhw, db, pumps):
     t = total(led)
     for a in (pr, inc):
         assert sum(a.annual().values()) == pytest.approx(t, rel=1e-9, abs=1e-6)
-    np.testing.assert_allclose(inc.by_service_kWh["CHW"], iso.by_service_kWh["CHW"])
+    if lthw + dhw > 0:  # with no heat service in the hour, cooling carries the actual electricity
+        np.testing.assert_allclose(inc.by_service_kWh["CHW"], iso.by_service_kWh["CHW"])
 
 
 def test_reuse_never_increases_electricity():

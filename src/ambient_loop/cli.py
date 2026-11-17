@@ -87,6 +87,30 @@ def _summary_json(s: Summary) -> dict[str, object]:
     }
 
 
+@app.command()
+def recovery(project_file: Path, out: Path | None = None) -> None:
+    """Hourly pinch / recovery analysis of a project's loads (no plant), with HTML report."""
+    from ambient_loop.recovery.pinch import analyse
+    from ambient_loop.recovery.report import recovery_report, summarise_recovery
+
+    t0 = time.perf_counter()
+    project, base = load_project(project_file)
+    inputs, _profile, _w, files = build_inputs(project, base)
+    pr, skipped = analyse(project, inputs.demand_kW)
+    s = summarise_recovery(project, pr, skipped)
+    out = out or base / "outputs"
+    out.mkdir(parents=True, exist_ok=True)
+    man = manifest(project.model_dump(mode="json"), [project_file, *files])
+    (out / "recovery.json").write_text(json.dumps({"manifest": man, **s.to_json()}, indent=2))
+    (out / "recovery.html").write_text(
+        recovery_report(project, s, pr, [f"run {man['config_hash']}", man["timestamp_utc"],
+                                         f"code {man['code_version']} ({man['git_sha']})"]))
+    typer.echo(f"{project.name}: recovery analysis in {time.perf_counter() - t0:.2f} s -> {out}")
+    for k, v in s.annual_MWh.items():
+        typer.echo(f"  {k:<34} {v:>10,.1f} MWh/yr")
+    typer.echo(f"  coincidence factor                 {s.coincidence:>10.3f}")
+
+
 @app.command("inspect-workbook")
 def inspect_cmd(workbook: Path, rows: int = 8) -> None:
     """Print sheets and first rows of a workbook (to build a mapping for a new layout)."""

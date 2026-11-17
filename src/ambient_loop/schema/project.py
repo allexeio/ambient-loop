@@ -70,6 +70,7 @@ class Stream(_Strict):
     duty_kW: SeriesRef
     T_in_C: float | Literal["mains"] | None = None
     T_out_C: float | None = None
+    exchange_class: Literal["liquid_liquid", "air_liquid"] = "liquid_liquid"
     tag: Tag = Tag.PROJECT_DATA
 
     @property
@@ -170,6 +171,23 @@ class SimplePlant(_Strict):
         return self
 
 
+class StorageSweep(_Strict):
+    capacities_kWh: list[float] = [0, 250, 500, 1000, 2000, 4000]
+    windows_h: list[int] = [2, 6, 12, 24]
+    loss_fraction_per_h: float = 0.005  # [Assumption A-016] standing loss of stored energy
+
+
+class RecoverySettings(_Strict):
+    """Settings for the hourly pinch / recovery analysis (Phase 2)."""
+
+    dT_min_K: dict[str, float] = {"liquid_liquid": 2.0, "air_liquid": 5.0}  # [A-001]
+    grid_K: float = 0.5  # problem-table resolution
+    band_K: float = 2.5  # heat-pump matching band width [A-002]
+    eta_carnot: float = 0.50  # generic second-law efficiency for screening [A-014]
+    hp_approach_K: float = 3.0  # refrigerant-to-fluid approach each side [A-015]
+    storage: StorageSweep = StorageSweep()
+
+
 class Target(_Strict):
     service: str  # e.g. LTHW, DHW, CHW, SYSTEM
     seasonal_ratio: float
@@ -186,6 +204,7 @@ class Project(_Strict):
     streams: list[Stream]
     plant: SimplePlant
     targets: list[Target] = []
+    recovery: RecoverySettings = RecoverySettings()
 
     @model_validator(mode="after")
     def _check_refs(self) -> Project:
