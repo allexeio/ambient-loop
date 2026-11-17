@@ -59,7 +59,7 @@ def svc_total(ctx, service: str) -> np.ndarray:  # type: ignore[no-untyped-def]
 
 st.sidebar.title("Ambient loop toolkit")
 page = st.sidebar.radio("Step", ["1 Project", "2 Loads", "3 Recovery", "4 Arrangements", "5 Results", "6 Compare",
-                                 "7 Export", "Assumptions"])
+                                 "7 Export", "8 Reports (concise + GLA summary)", "Assumptions"])
 projects = sorted(str(p.relative_to(ROOT)) for p in (ROOT / "projects").glob("*/project.yaml"))
 if "project" not in st.session_state and projects:
     st.session_state.project = projects[0]
@@ -275,6 +275,25 @@ elif page in ("5 Results", "6 Compare", "7 Export"):
                                    f"{c.arrangement.id}_hourly.csv")
             col[2].download_button(f"{c.arrangement.id} report HTML", case_page(CTX.project, c, [man["config_hash"]]).encode(),
                                    f"{c.arrangement.id}.html")
+
+elif page.startswith("8 Reports"):
+    st.header("Reports for submission")
+    st.write("A concise options report, and a short calculation summary that substantiates the SCOP/SEER values entered "
+             "in SBEM/BRUKL for the proposed system (Energy Statement appendix).")
+    ids = st.multiselect("Arrangements to appraise", list(ARCHETYPES),
+                         default=st.session_state.get("chosen") or ["S0", "S1", "S2", "S3", "S4", "A1", "A3", "A2+3", "A7"])
+    prop = st.selectbox("Proposed system for the calculation summary", ["(recommended)"] + ids)
+    if st.button("Generate reports"):
+        from ambient_loop.scenarios.report import make_reports
+        with st.spinner("Simulating the options and the sensitivity cases…"):
+            r = make_reports(P, None if prop == "(recommended)" else prop, ids, pdf=True, workers=1)
+        st.success(f"Recommended: {r['recommended']}. Calculation summary for {r['proposed']}.")
+        for k, label in (("concise_pdf", "Concise report (PDF)"), ("concise_html", "Concise report (HTML)"),
+                         ("summary_pdf", "Calculation summary (PDF)"), ("summary_html", "Calculation summary (HTML)")):
+            f = r.get(k)
+            if f:
+                st.download_button(label, Path(f).read_bytes(), Path(f).name)
+        components.html(Path(r["summary_html"]).read_text(), height=2400, scrolling=True)
 
 elif page == "Assumptions":
     st.header("Assumptions register")

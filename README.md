@@ -13,6 +13,8 @@ Status: **v1, all six phases built.** Ready for the assumptions review before in
 ```bash
 uv sync
 uv run ambient-loop import-workbook inputs/fixture1.xlsx --out projects/fixture1   # or write project.yaml by hand
+uv run ambient-loop new-project my_site --loads loads.csv --map "LTHW=Heating kW,CHW=Cooling kW,DHW=DHW kW" --weather London_TRY.epw
+uv run ambient-loop report projects/my_site/project.yaml                         # options ladder + GLA calculation summary (PDF)
 uv run ambient-loop study projects/fixture1/project.yaml                         # the whole workflow, HTML report
 uv run ambient-loop ui                                                           # Streamlit interface
 uv run pytest
@@ -30,6 +32,8 @@ uv run pytest
 | `optimise` | Differential evolution over arrangement fields, e.g. `buffer.volume_m3=1:40`. |
 | `departure` | Step-by-step attribution from the workbook simple mode to full physics (brief §9.1). |
 | `parse-equipment` | Manufacturer selection PDF to a library YAML candidate, marked for review. |
+| `new-project` | Create a project from hourly loads (CSV/XLSX with column mapping) or from benchmark synthesis (building type, GIA, occupants). |
+| `report` | Concise options report and the GLA calculation summary substantiating the SBEM/BRUKL SCOP/SEER inputs (HTML + PDF). |
 | `ui` | Streamlit front end. |
 
 ## Read these

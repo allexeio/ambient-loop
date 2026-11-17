@@ -244,6 +244,20 @@ def new_project(
         typer.echo(f"  {k:<6} {v.sum() / 1e3:>10,.1f} MWh/yr  peak {v.max():>8,.0f} kW")
 
 
+@app.command()
+def report(project_file: Path, proposed: str = typer.Option("", help="arrangement id for the calculation summary; default: recommended"),
+           ids: str = typer.Option("", help="comma-separated arrangement ids; default: project list or generator"),
+           out: Path | None = None, pdf: bool = True, carbon: float = 0.136, tariff: float = 0.25) -> None:
+    """Concise options report + GLA calculation summary substantiating the SBEM/BRUKL seasonal efficiencies."""
+    from ambient_loop.scenarios.report import make_reports
+
+    r = make_reports(project_file, proposed or None, [i for i in ids.split(",") if i] or None, out, pdf, None, carbon, tariff)
+    typer.echo(f"Recommended: {r['recommended']}; calculation summary for {r['proposed']}")
+    for k in ("concise_html", "concise_pdf", "summary_html", "summary_pdf"):
+        if r.get(k):
+            typer.echo(f"  {r[k]}")
+
+
 @app.command("inspect-workbook")
 def inspect_cmd(workbook: Path, rows: int = 8) -> None:
     """Print sheets and first rows of a workbook (to build a mapping for a new layout)."""

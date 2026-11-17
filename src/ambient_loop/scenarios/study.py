@@ -23,6 +23,16 @@ from ambient_loop.scenarios.sweep import Point, pareto, sweep
 from ambient_loop.sim.full_mode import run_arrangement
 
 
+def _totals(ctx: Any) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    svc = {s.id: s.service_name for s in ctx.project.streams}
+
+    def tot(service: str) -> np.ndarray:
+        arrs = [v for k, v in ctx.inputs.demand_kW.items() if svc[k] == service]
+        return np.sum(arrs, axis=0) if arrs else np.zeros(8760)
+
+    return tot("LTHW"), tot("CHW"), tot("DHW")
+
+
 def run_study(project_file: Path, out: Path | None = None, workers: int | None = None, quick: bool = False,
               carbon: float = 0.136, tariff: float = 0.25) -> dict[str, Any]:
     t0 = time.perf_counter()

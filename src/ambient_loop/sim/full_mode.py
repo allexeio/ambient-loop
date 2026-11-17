@@ -303,7 +303,7 @@ def run_full(project: Project, arr: Arrangement, inp: FullInputs, *, isolated: b
         "W_s1", "evap_s1", "int_flow", "R", "W_R", "evap_R", "imm", "cal_in", "cal_out", "cal_loss", "cal_dU",
         "ext_supply", "ground_supply", "ashp_d", "W_ashp", "loop_backup", "dc_r", "W_dc", "tw_r", "W_tw",
         "ground_rej", "ac_r", "W_ac", "unmet_rej", "W_pump_loop", "W_pump_other", "W_bal_pumps",
-        "cond_air", "evap_L_air", "evap_R_air",
+        "cond_air", "evap_L_air", "evap_R_air", "W_pump_dist", "W_cool_hr",
         "hr_to_dhw_share")}
     plr: dict[str, list[float]] = {}
     run_mask: dict[str, np.ndarray] = {}
@@ -427,6 +427,7 @@ def run_full(project: Project, arr: Arrangement, inp: FullInputs, *, isolated: b
             o["C_served"][t] = C - unmet_c
             o["C_unmet"][t] = unmet_c
             o["W_cool"][t] = W_hr + W_rej
+            o["W_cool_hr"][t] = W_hr
             o["cond_hr"][t] = cond_hr
             o["cond_rej"][t] = cond_rej
         else:
@@ -652,12 +653,15 @@ def run_full(project: Project, arr: Arrangement, inp: FullInputs, *, isolated: b
                 surplus -= r
         o["unmet_rej"][t] = max(surplus, 0.0)
 
-        # other pumps (heat to ambient)
-        wo = 0.0
+        # distribution pumps (LTHW/CHW secondary; SBEM counts these as auxiliary energy) and
+        # generation-side pumps (heat recovery, DHW primary, balancing); heat to ambient
+        wd = 0.0
         if "chw" in pumps:
-            wo += pumps["chw"].power_kW(flow_for_duty(C, arr.chw.return_C - arr.chw.flow_C, 1000, 4190))  # type: ignore[union-attr]
+            wd += pumps["chw"].power_kW(flow_for_duty(C, arr.chw.return_C - arr.chw.flow_C, 1000, 4190))  # type: ignore[union-attr]
         if "lthw" in pumps:
-            wo += pumps["lthw"].power_kW(flow_for_duty(L, lthw_flow - lthw_ret, 990, 4180))
+            wd += pumps["lthw"].power_kW(flow_for_duty(L, lthw_flow - lthw_ret, 990, 4180))
+        o["W_pump_dist"][t] = wd
+        wo = 0.0
         if "hr" in pumps:
             hr_heat = o["cond_hr"][t] + o["buf_dis"][t]
             wo += pumps["hr"].power_kW(flow_for_duty(hr_heat, hr_dT, 990, 4180))
@@ -694,7 +698,8 @@ def run_full(project: Project, arr: Arrangement, inp: FullInputs, *, isolated: b
     }
     peaks = {"LTHW": float(qL.max()), "CHW": float(qC.max()), "DHW": float(qD.max()),
              "ASHP to loop": float(o["ashp_d"].max()), "Loop rejection": float((o["dc_r"] + o["ac_r"] + o["tw_r"] + o["ground_rej"]).max())}
-    pumps_kWh = {"loop": float(o["W_pump_loop"].sum()), "other circuits": float(o["W_pump_other"].sum()),
+    pumps_kWh = {"loop": float(o["W_pump_loop"].sum()), "distribution (LTHW/CHW)": float(o["W_pump_dist"].sum()),
+                 "other circuits": float(o["W_pump_other"].sum()),
                  "listed balancing pumps": float(o["W_bal_pumps"].sum())}
     for k, arr_ in o.items():
         led.derived[f"o:{k}"] = arr_
@@ -709,6 +714,7 @@ def _shift_hr_to_reject(o: dict[str, FloatArray], t: int, spill_evap_heat: float
     evap_spill = cond_spill * (cop_hr - 1) / cop_hr
     o["cond_hr"][t] -= cond_spill
     o["W_cool"][t] -= cond_spill - evap_spill
+    o["W_cool_hr"][t] -= cond_spill - evap_spill
     w_rej = evap_spill / (cop_rej - 1)
     o["W_cool"][t] += w_rej
     o["cond_rej"][t] += evap_spill + w_rej
@@ -889,6 +895,15 @@ def _build_ledger(project, arr, o, qL, qC, qDm, qDc, lthw_ids, chw_ids, dhw_ids,
         comp("pump:loop", "pump", Role.UNIT, w or None)
         led.add_flow("pump:loop", LOOP, o["W_pump_loop"])
         led.add_elec("pump:loop", o["W_pump_loop"])
+    if o["W_pump_dist"].sum() > 0:
+        wd_: dict[str, FloatArray] = {}
+        for s_ in chw_svc:
+            wd_[s_] = qC
+        for s_ in lthw_svc:
+            wd_[s_] = wd_.get(s_, 0) + qL
+        comp("pump:distribution", "pump", Role.UNIT, wd_ or None)
+        led.add_flow("pump:distribution", AMB, o["W_pump_dist"])
+        led.add_elec("pump:distribution", o["W_pump_dist"])
     if o["W_pump_other"].sum() + o["W_bal_pumps"].sum() > 0:
         w2: dict[str, FloatArray] = {}
         if qC.sum() > 0:
@@ -900,9 +915,9 @@ def _build_ledger(project, arr, o, qL, qC, qDm, qDc, lthw_ids, chw_ids, dhw_ids,
         if (qDm + qDc).sum() > 0:
             for s in dhw_svc:
                 w2[s] = w2.get(s, 0) + qDm + qDc
-        comp("pump:circuits", "pump", Role.UNIT, w2 or None)
-        led.add_flow("pump:circuits", AMB, o["W_pump_other"] + o["W_bal_pumps"])
-        led.add_elec("pump:circuits", o["W_pump_other"] + o["W_bal_pumps"])
+        comp("pump:generation", "pump", Role.UNIT, w2 or None)
+        led.add_flow("pump:generation", AMB, o["W_pump_other"] + o["W_bal_pumps"])
+        led.add_elec("pump:generation", o["W_pump_other"] + o["W_bal_pumps"])
     for k in list(led.derived):
         if k.startswith(("extraction:", "rejection:")) and not isinstance(led.derived[k], np.ndarray):
             led.derived[k] = np.asarray(led.derived[k], float) * np.ones(HOURS)

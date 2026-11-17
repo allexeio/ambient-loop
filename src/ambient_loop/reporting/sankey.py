@@ -53,7 +53,7 @@ def flows(led: Ledger) -> list[tuple[str, str, float]]:
     add("Heat recovery", "Losses", o.get("buf_loss", 0))
     add("Ambient loop", "Rejected outdoors", o.get("dc_r", 0) + o.get("tw_r", 0) + o.get("ac_r", 0) + o.get("ground_rej", 0))
     add("Electricity", "Rejected outdoors", E("dry_cooler") + E("tower") + E("ashp_cooling"))
-    add("Electricity", "Losses", E("pump:circuits"))
+    add("Electricity", "Losses", E("pump:distribution") + E("pump:generation"))
     return L
 
 
