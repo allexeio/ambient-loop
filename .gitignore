@@ -5,3 +5,6 @@ __pycache__/
 .venv/
 .pytest_cache/
 outputs/
+# Projects imported from client workbooks are client data
+projects/fixture1/
+projects/**/outputs/

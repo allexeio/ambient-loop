@@ -1,0 +1,59 @@
+# Mapping for the Milieu hourly ambient-loop workbook (sheets: Results, Inputs, Hourly calculation,
+# Original CSV, London TRY, Plant schedule, Dry cooler).
+# Labels are case-insensitive regular expressions matched against the label column. Each must
+# match exactly one cell; the importer stops with an error otherwise, so a changed workbook
+# fails loudly rather than silently picking the wrong value.
+name: Milieu ambient-loop workbook v1 (Nov 2026 layout)
+hourly:
+  sheet: Hourly calculation
+  columns:            # model input -> header text (regex)
+    LTHW_kW: '^LTHW kW$'
+    CHW_kW: '^CHW kW$'
+    DHW_kW: '^DHW kW$'
+    dry_bulb_C: 'DBT C$'
+  reference:          # workbook outputs for hour-by-hour comparison
+    reused_kW: '^Loop heat reused kW$'
+    residual_heat_kW: '^Residual roof heat kW$'
+    residual_cool_kW: '^Residual roof cooling kW$'
+    ashp_cop: '^ASHP heat COP$'
+    dry_cooler_kW: '^Dry cooler rejection kW$'
+    LTHW_kWe: '^LTHW total kWe$'
+    DHW_kWe: '^DHW total kWe$'
+    CHW_kWe: '^CHW total kWe$'
+    total_kWe: '^Total plant kWe$'
+    LTHW_isolated_kWe: '^LTHW isolated kWe$'
+    DHW_isolated_kWe: '^DHW isolated kWe$'
+    CHW_isolated_kWe: '^CHW isolated kWe$'
+inputs:
+  sheet: Inputs
+  label_column: A
+  value_column: B
+  params:
+    cop_lthw: 'LTHW gross COP'
+    eer_chw: 'CHW gross EER'
+    cop_dhw: 'DHW COP'
+    eer_roof_cool: 'Rooftop cooling fallback EER'
+    reuse_fraction: 'heat-reuse fraction'
+    pumps_switch: 'Include separately listed rooftop pumps'
+    pump_heat_ratio: 'Rooftop heating pump'
+    pump_cool_ratio: 'Rooftop cooling pump'
+    dc_capacity_kW: '^Rated heat rejection$'
+    dc_elec_ratio: 'Dry cooler electrical input per kW rejected'
+    dc_cutoff_C: 'Outdoor screening cutoff'
+    time_step_h: 'Time-step duration'
+  curves:
+    ashp_heating_cop:
+      header_label: '^Outdoor C$'   # row holding the curve headers; x in label column
+      y_header: '^Gross COP$'
+results:
+  sheet: Results
+  label_column: A
+  services: [LTHW, DHW, CHW]       # exact labels; columns below are relative to the label
+  service_columns: {useful_MWh: B, elec_MWh: C, ratio: D, isolated_ratio: E}
+  totals:
+    electricity_MWh: '^Total plant electricity$'
+    isolated_electricity_MWh: '^Isolated electricity'
+    reused_MWh: '^Ambient-loop heat reused$'
+    residual_heat_MWh: '^Residual rooftop heating$'
+    surplus_MWh: '^Surplus heat for outdoor rejection$'
+  totals_value_column: B

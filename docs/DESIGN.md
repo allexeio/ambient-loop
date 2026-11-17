@@ -1,6 +1,8 @@
-# Design proposal — Heat Recovery & Ambient Loop Scenario Toolkit
+# Design — Heat Recovery & Ambient Loop Scenario Toolkit
 
-Status: **proposal for review** (pre-Phase 1). Nothing below is built yet. It answers the brief's
+Status: **Phase 1 built** (simple mode, ledger, allocation, workbook importer; Fixture 1
+reproduced exactly — see `docs/FIXTURE1_MAPPING.md`). Sections 3–5 remain the plan for
+Phases 2–4. Original proposal text follows. Nothing below is built yet. It answers the brief's
 opening ask: package structure, data schema, and the pinch/recovery method, plus how Fixture 1
 will be used to confirm the approach before the full engine is written.
 
@@ -398,3 +400,32 @@ TESPy/Modelica.
 Streamlit is fine for v1 internal use. If this becomes client-facing or multi-user, the better
 long-term shape is the same engine behind a small FastAPI service with a static front end.
 Decide at Phase 6, not now.
+
+---
+
+## 8. Reference schematic (received 17 Nov 2026)
+
+`inputs/sample_wshp_schematic.pdf` (git-ignored) is the reference for two later pieces of work.
+
+**(a) The graph schema (Phase 3–4)** must be able to express it:
+
+- 4-pipe reversible WSHPs, each with a source changeover (CV-S) and a user changeover (CV-U).
+  Each changeover switches flow and return together.
+- Per-unit modes: heating, cooling with heat recovery, cooling with rejection. Each has an
+  entry condition (buffer state, demand).
+- A stratified primary buffer with charge (top) and draw (bottom) heights and a sensor count.
+- A PHX preheat on the cold feed, with secondary outlet temperature control.
+- A DHW secondary return that bypasses preheat. The validator checks this (rule 8).
+- Calorifiers with coils, and a DHW heat pump top-up sourced from the loop.
+- Tagged pumps per circuit.
+
+**(b) The auto-generated schematic style (Phase 6).** Target output:
+
+- colour per circuit, matching the legend
+- flow solid, return dashed
+- equipment tags, and temperatures on the pipes
+- numbered callouts linked to design notes
+- an operating-modes table and an "expected performance" strip with the boundary stated
+
+This arrangement is archetype 2 + 3 ("HR → LTHW buffer → DHW preheat → DHW HP top-up from
+loop"). It will be the first hand-written arrangement YAML in Phase 3.
