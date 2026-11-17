@@ -45,7 +45,7 @@ def make_reports(project_file: Path, proposed: str | None = None, ids: list[str]
     sens = scop_sensitivity(ctx, chosen)
     safe = chosen.arrangement.id.replace("+", "_")
     cs = out / f"calculation_summary_{safe}.html"
-    cs.write_text(calc_summary(ctx, chosen, sens, meta, man))
+    cs.write_text(calc_summary(ctx, chosen, sens, meta, man, carbon=carbon, tariff=tariff))
     res: dict[str, Any] = {"concise_html": cr, "summary_html": cs, "recommended": best.arrangement.id,
                            "proposed": chosen.arrangement.id, "cases": cases}
     if pdf:

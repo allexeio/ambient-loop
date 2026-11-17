@@ -37,4 +37,4 @@ def test_reports_render():
     html = concise_report(c0, cases, best, reasons, econ, [], ["test"])
     assert "Options: basic to complex" in html and "S0" in html and "A2+3" in html
     s = calc_summary(c0, best, [], ["test"], {"config_hash": "x", "code_version": "0", "git_sha": "y"})
-    assert "Values for the SBEM model" in s and "Post-construction monitoring" in s
+    assert "Seasonal performance values for the energy modelling" in s and "para 10.9" in s and "be seen" in s
