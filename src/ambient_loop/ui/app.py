@@ -68,6 +68,56 @@ if page == "1 Project":
     st.header("Project setup")
     if projects:
         st.session_state.project = st.selectbox("Project", projects, index=projects.index(st.session_state.get("project", projects[0])))
+    with st.expander("Create a new project: upload loads or synthesise them", expanded=not projects):
+        from ambient_loop.io.new_project import create_project, read_weather
+        from ambient_loop.loads.synth import SynthSpec, building_types, synthesise
+
+        nm = st.text_input("Project name", "new_project", key="np_name")
+        wfile = st.file_uploader("Weather: EPW, or CSV/XLSX with an hourly dry-bulb column (use the CIBSE TRY for GLA work)",
+                                 type=["epw", "csv", "xlsx"], key="np_w")
+        wcol = st.text_input("Dry-bulb column (table weather files only)", "dry_bulb_C", key="np_wc")
+        mode = st.radio("Loads", ["Upload hourly loads", "Synthesise from benchmarks"], horizontal=True)
+        loads_kW: dict = {}
+        if mode == "Upload hourly loads":
+            lf = st.file_uploader("Hourly loads (8,760 rows; CSV or XLSX)", type=["csv", "xlsx"], key="np_l")
+            if lf is not None:
+                df = pd.read_csv(lf) if lf.name.endswith(".csv") else pd.read_excel(lf)
+                st.dataframe(df.head(5))
+                cols = ["(none)"] + list(df.columns)
+                for svc in ("LTHW", "CHW", "DHW", "PROCESS_COOL"):
+                    c1, c2 = st.columns([3, 1])
+                    col = c1.selectbox(f"{svc} column", cols, key=f"np_{svc}")
+                    unit = c2.selectbox("unit", ["kW", "W", "MW"], key=f"np_u_{svc}")
+                    if col != "(none)":
+                        v = pd.to_numeric(df[col], errors="coerce").fillna(0).to_numpy(float)
+                        if len(v) == 8784:
+                            v = np.r_[v[:1416], v[1440:]]
+                        loads_kW[svc] = v * {"kW": 1.0, "W": 1e-3, "MW": 1e3}[unit]
+        else:
+            bts = list(building_types())
+            c = st.columns(3)
+            bt = c[0].selectbox("Building type", bts)
+            gia = c[1].number_input("GIA (m²)", 100.0, 1e6, 10000.0, step=500.0)
+            occ = c[2].number_input("Occupants / beds", 0.0, 1e5, 500.0, step=50.0)
+            d = building_types()[bt]
+            c = st.columns(3)
+            qh = c[0].number_input("Space heating kWh/m²·yr", 0.0, 500.0, float(d["heating_kWh_m2"]))
+            qc = c[1].number_input("Cooling kWh/m²·yr", 0.0, 500.0, float(d["cooling_kWh_m2"]))
+            lpd = c[2].number_input("DHW litres/occupant/day", 0.0, 500.0, float(d["dhw_litres_per_occupant_day"]))
+            st.caption("Benchmarks are placeholders (A-055): replace with TM54 or dynamic-model outputs where available.")
+        dhw_store = st.number_input("DHW storage temperature (°C)", 60.0, 70.0, 60.0)
+        if st.button("Create project") and wfile is not None:
+            with tempfile.NamedTemporaryFile(suffix=Path(wfile.name).suffix, delete=False) as f:
+                f.write(wfile.getbuffer())
+            db = read_weather(Path(f.name), wcol)
+            tag = "project_data"
+            if mode != "Upload hourly loads":
+                raw = synthesise(SynthSpec(bt, gia, occ, qh, qc, lpd, dhw_store), db)
+                loads_kW = {k.replace("_kW", ""): v for k, v in raw.items() if v.sum() > 0}
+                tag = "assumption"
+            out = create_project(ROOT / "projects" / nm, nm, loads_kW, db, dhw_store_C=dhw_store, load_tag=tag)
+            st.success(f"Created {out.relative_to(ROOT)}. Select it above and continue to Loads.")
+            st.session_state.project = str(out.relative_to(ROOT))
     with st.expander("Import a Milieu ambient-loop workbook"):
         up = st.file_uploader("Workbook (.xlsx)", type=["xlsx"])
         name = st.text_input("Project name", "new_project")

@@ -1,0 +1,36 @@
+# Generic building-type profiles for load SYNTHESIS when no hourly model output exists.
+# Milieu toolkit placeholders [Assumption A-055]: replace intensities with TM54 / dynamic
+# simulation results or metered data wherever available. Hourly shapes are relative weights
+# (24 values, hour ending 1..24) and are normalised by the code.
+hotel:
+  heating_kWh_m2: 40
+  cooling_kWh_m2: 60
+  cooling_base_fraction: 0.35     # share of cooling that is internal/process (kitchens, comms, guest rooms)
+  dhw_litres_per_occupant_day: 115
+  occupancy_shape: [0.9,0.9,0.9,0.9,0.9,0.9,0.95,1,0.9,0.7,0.6,0.6,0.6,0.6,0.6,0.6,0.7,0.8,0.9,1,1,1,0.95,0.9]
+  dhw_shape: [3,2,1,1,1,2,6,10,11,8,5,4,4,4,3,3,4,6,8,7,5,4,3,3]
+  weekend_factor: 1.0
+office:
+  heating_kWh_m2: 25
+  cooling_kWh_m2: 45
+  cooling_base_fraction: 0.25
+  dhw_litres_per_occupant_day: 5
+  occupancy_shape: [0.05,0.05,0.05,0.05,0.05,0.1,0.3,0.7,1,1,1,1,1,1,1,1,1,0.8,0.4,0.15,0.05,0.05,0.05,0.05]
+  dhw_shape: [0,0,0,0,0,0,1,4,8,6,5,6,9,7,5,5,5,4,2,1,0,0,0,0]
+  weekend_factor: 0.15
+residential:
+  heating_kWh_m2: 25
+  cooling_kWh_m2: 10
+  cooling_base_fraction: 0.1
+  dhw_litres_per_occupant_day: 50
+  occupancy_shape: [1,1,1,1,1,1,1,0.9,0.6,0.5,0.5,0.5,0.5,0.5,0.5,0.6,0.7,0.9,1,1,1,1,1,1]
+  dhw_shape: [1,0.5,0.5,0.5,0.5,1,4,8,7,5,3,3,3,3,3,3,4,6,8,8,6,4,3,2]
+  weekend_factor: 1.0
+retail:
+  heating_kWh_m2: 30
+  cooling_kWh_m2: 50
+  cooling_base_fraction: 0.4
+  dhw_litres_per_occupant_day: 3
+  occupancy_shape: [0.05,0.05,0.05,0.05,0.05,0.05,0.1,0.4,0.9,1,1,1,1,1,1,1,1,1,0.9,0.6,0.2,0.05,0.05,0.05]
+  dhw_shape: [0,0,0,0,0,0,1,3,5,5,5,6,6,5,5,5,5,5,4,2,1,0,0,0]
+  weekend_factor: 0.9

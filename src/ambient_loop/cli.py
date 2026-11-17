@@ -206,6 +206,44 @@ def departure(project_file: Path, archetype: str = "A1") -> None:
         typer.echo(f"  {r['step']:<60} {r['electricity_MWh']:>8.1f} {d}  ratio {r['ratio']:.2f}")
 
 
+@app.command("new-project")
+def new_project(
+    name: str,
+    weather: Path = typer.Option(..., help="EPW, or CSV/XLSX with a dry-bulb column (CIBSE TRY recommended)"),
+    weather_column: str = typer.Option("", help="dry-bulb column for table weather files"),
+    loads: Path | None = typer.Option(None, help="hourly loads CSV/XLSX (8,760 rows)"),
+    map: str = typer.Option("", help="column mapping, e.g. 'LTHW=Heating (W)*0.001,CHW=Cooling (W)*0.001,DHW=DHW kW'"),
+    synth: str = typer.Option("", help="building type to synthesise loads: hotel, office, residential, retail"),
+    gia: float = 0.0, occupants: float = 0.0,
+    heating_kwh_m2: float | None = None, cooling_kwh_m2: float | None = None, dhw_lpd: float | None = None,
+    dhw_store: float = 60.0, mains: float = 10.0,
+    out: Path | None = None,
+) -> None:
+    """Create a project from hourly loads (with column mapping) or from benchmark synthesis."""
+    from ambient_loop.io.new_project import create_project, load_columns, parse_mapping, read_weather
+    from ambient_loop.loads.synth import SynthSpec, synthesise
+
+    db = read_weather(weather, weather_column or None)
+    if loads is not None:
+        if not map:
+            raise typer.BadParameter("--map is required with --loads")
+        data = load_columns(loads, parse_mapping(map))
+        tag, desc = "project_data", f"Loads from {loads.name}"
+    elif synth:
+        sp = SynthSpec(synth, gia, occupants, heating_kwh_m2, cooling_kwh_m2, dhw_lpd, dhw_store, mains)
+        raw = synthesise(sp, db)
+        data = {k.replace("_kW", ""): v for k, v in raw.items() if v.sum() > 0}
+        tag, desc = "assumption", f"Synthesised {synth} loads, GIA {gia:,.0f} m², {occupants:,.0f} occupants (A-055)"
+    else:
+        raise typer.BadParameter("give --loads with --map, or --synth")
+    out = out or Path("projects") / name
+    p = create_project(out, name, data, db, description=desc, mains_C=mains, dhw_store_C=dhw_store, load_tag=tag,
+                       weather_source=weather)
+    typer.echo(f"Created {p}")
+    for k, v in data.items():
+        typer.echo(f"  {k:<6} {v.sum() / 1e3:>10,.1f} MWh/yr  peak {v.max():>8,.0f} kW")
+
+
 @app.command("inspect-workbook")
 def inspect_cmd(workbook: Path, rows: int = 8) -> None:
     """Print sheets and first rows of a workbook (to build a mapping for a new layout)."""
