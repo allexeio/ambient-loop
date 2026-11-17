@@ -58,12 +58,17 @@ def capex(arr: Arrangement, rates: dict[str, float]) -> tuple[float, dict[str, f
     """Indicative capital proxy (£) and breakdown."""
     r = rates
     items: dict[str, float] = {}
-    if arr.cooling:
+    if arr.cooling and arr.cooling.sink == "air":
+        items["Air-cooled chillers"] = arr.cooling.count * arr.cooling.unit_kW * 0.78 * r["ashp_cooling_per_kW"]
+        if arr.cooling.hr_target != "none":
+            items["Heat-recovery condensers and pipework"] = r["hr_circuit_item"]
+    elif arr.cooling:
         items["WSHP fleet"] = arr.cooling.count * arr.cooling.unit_kW * r["wshp_per_kW"]
         if arr.cooling.hr_target != "none":
             items["Heat-recovery circuit and changeover"] = r["hr_circuit_item"]
     if arr.heating:
-        items["LTHW heat pumps"] = arr.heating.count * arr.heating.unit_kW * r["wshp_per_kW"]
+        rate = r["ashp_per_kW"] if arr.heating.source == "air" else r["wshp_per_kW"]
+        items["LTHW heat pumps"] = arr.heating.count * arr.heating.unit_kW * rate
     if arr.dhw:
         g = arr.dhw.generator
         if g.type == "co2":

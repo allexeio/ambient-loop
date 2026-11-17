@@ -10,7 +10,7 @@ from typing import Any
 
 import numpy as np
 
-from ambient_loop.arrangements.archetypes import ARCHETYPES, SiteBasis
+from ambient_loop.arrangements.archetypes import ARCHETYPES, SiteBasis, autosize
 from ambient_loop.core.metric import DhwProfile
 from ambient_loop.loads.validation import dhw_peak_fraction
 from ambient_loop.recovery.pinch import analyse
@@ -42,7 +42,14 @@ def load_context(project_file: Path) -> ProjectContext:
     rec = summarise_recovery(project, pr, skipped)
     dhw = [inp.demand_kW[s.id] for s in project.streams if s.service_name == "DHW"]
     peak = dhw_peak_fraction(np.sum(dhw, axis=0)) if dhw else float("nan")
-    return ProjectContext(project, base, inp, prof, SiteBasis(**project.site), rec, peak, files)
+    svc = {s.id: s.service_name for s in project.streams}
+    peaks: dict[str, float] = {}
+    for k in ("LTHW", "CHW", "DHW"):
+        arrs = [inp.demand_kW[i] for i, v in svc.items() if v == k]
+        peaks[k] = float(np.max(np.sum(arrs, axis=0))) if arrs else 0.0
+    dhw_mean = float(np.mean(np.sum(dhw, axis=0))) if dhw else 0.0
+    site = autosize(SiteBasis(**project.site), peaks, dhw_mean)
+    return ProjectContext(project, base, inp, prof, site, rec, peak, files)
 
 
 def arrangements_for(ctx: ProjectContext, ids: list[str] | None = None) -> list[Arrangement]:

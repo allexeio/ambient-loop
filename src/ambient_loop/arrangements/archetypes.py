@@ -9,6 +9,8 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
+import numpy as np
+
 from pydantic import BaseModel, ConfigDict
 
 from ambient_loop.schema.arrangement import (
@@ -82,6 +84,16 @@ class SiteBasis(BaseModel):
     greywater_kW: float = 50.0
     ground: dict[str, float | int | str] = {"n_bores": 40, "depth_m": 200.0}
     pumps_included: bool = True
+    # stand-alone plant (no loop)
+    lthw_ashp_model: ModelSpec = lib("ashp_air_to_water")
+    lthw_ashp_count: int = 2
+    lthw_ashp_unit_kW: float = 150.0
+    chiller_model: ModelSpec = lib("chiller_air_cooled")
+    chiller_count: int = 2
+    chiller_unit_kW: float = 250.0  # condenser (heat) basis, like the WSHP fleet
+    dhw_air_model: ModelSpec = lib("ashp_ht_air_to_water")
+    dhw_air_count: int = 3
+    dhw_air_unit_kW: float = 100.0
 
 
 # ---- blocks ---------------------------------------------------------------------------------
@@ -276,7 +288,75 @@ def a10_ground_reject(b: SiteBasis) -> Arrangement:
                        **_base(b, surplus=[gnd, _ashp_cool(b)]))  # type: ignore[arg-type]
 
 
+# ---- stand-alone plant: the basic end of the ladder ------------------------------------------
+def _standalone(b: SiteBasis, **kw: object) -> dict[str, object]:
+    d: dict[str, object] = {
+        "loop": None,
+        "chw": CircuitSpec(flow_C=b.chw_flow_C, return_C=b.chw_return_C),
+        "lthw": CircuitSpec(flow_C=b.lthw_flow_C, return_C=b.lthw_return_C),
+        "cooling": CoolingSpec(model=b.chiller_model, count=b.chiller_count, unit_kW=b.chiller_unit_kW, sink="air"),
+        "heating": FleetSpec(model=b.lthw_ashp_model, count=b.lthw_ashp_count, unit_kW=b.lthw_ashp_unit_kW, source="air"),
+        "dhw": _dhw(b, DHWGenSpec(model=b.dhw_air_model, count=b.dhw_air_count, unit_kW=b.dhw_air_unit_kW, source="air")),
+        "deficit": [], "surplus": [], "pumps_included": b.pumps_included,
+    }
+    d.update(kw)
+    return d
+
+
+def s0_electric_dhw(b: SiteBasis) -> Arrangement:
+    gen = DHWGenSpec(type="electric", model=lib("electric"), count=1, unit_kW=10_000.0)
+    return Arrangement(id="S0", archetype="S0", title="ASHP heating + air-cooled chiller + electric DHW",
+                       why=["Lowest-capital reference: separate air-source heating and cooling, direct electric hot water."],
+                       relies_on=["No heat recovery"], **_standalone(b, dhw=_dhw(b, gen)))  # type: ignore[arg-type]
+
+
+def s1_ashp_chiller(b: SiteBasis) -> Arrangement:
+    return Arrangement(id="S1", archetype="S1", title="ASHP heating + air-cooled chiller + HT air-source DHW heat pumps",
+                       why=["Basic all-electric plant: each service has its own air-source machine; no heat sharing."],
+                       relies_on=["Roof space and acoustic allowance for air-source plant"], **_standalone(b))  # type: ignore[arg-type]
+
+
+def s2_ashp_chiller_co2(b: SiteBasis) -> Arrangement:
+    gen = DHWGenSpec(type="co2", source="air", model=b.co2_model, count=b.co2_count, unit_kW=b.co2_unit_kW)
+    rh = FleetSpec(model=b.dhw_air_model, count=1, unit_kW=max(b.dhw_air_unit_kW, 50.0), source="air")
+    cf = b.circulation_fraction or 0.25
+    return Arrangement(id="S2", archetype="S2", title="ASHP heating + air-cooled chiller + CO₂ DHW with HT air-source reheat",
+                       why=["CO₂ heats cold mains efficiently; circulation reheat by a separate HT unit (rule 4b)."],
+                       relies_on=[f"Circulation losses {cf:.0%} of DHW energy [A-033]"],
+                       **_standalone(b, dhw=_dhw(b, gen, reheat=rh, circulation_fraction=cf)))  # type: ignore[arg-type]
+
+
+def s3_four_pipe_air(b: SiteBasis) -> Arrangement:
+    cool = CoolingSpec(model=b.chiller_model, hr_model=b.cooling_model, count=b.chiller_count, unit_kW=b.chiller_unit_kW,
+                       sink="air", hr_target="lthw")
+    return Arrangement(id="S3", archetype="S3", title="4-pipe air-source multifunction units (simultaneous heat recovery) + HT air-source DHW",
+                       why=["Recovers heat between simultaneous LTHW and CHW without a loop; air when only one is needed."],
+                       relies_on=["Heat-recovery mode modelled as water-to-water at LTHW flow [A-054]",
+                                  "Heating-only mode modelled as a separate ASHP fleet (capacity sharing not modelled) [A-054]"],
+                       **_standalone(b, cooling=cool))  # type: ignore[arg-type]
+
+
+def s4_chiller_hr_preheat(b: SiteBasis) -> Arrangement:
+    cool = CoolingSpec(model=b.chiller_model, hr_model=b.cooling_model, count=b.chiller_count, unit_kW=b.chiller_unit_kW,
+                       sink="air", hr_target="hr_circuit")
+    return Arrangement(id="S4", archetype="S4", title="Air-cooled chiller with heat recovery to LTHW and DHW preheat + air-source top-up",
+                       why=["Chiller heat recovery (desuperheater / HR condenser) serves heating and cold-feed preheat without a loop."],
+                       relies_on=["Chiller has a heat-recovery condenser at 45 °C", "Preheat PHX, no warm potable storage"],
+                       hr=_hr(b, ["space_heating", "dhw_preheat", "reject"]),
+                       **_standalone(b, cooling=cool, dhw=_dhw(b, DHWGenSpec(model=b.dhw_air_model, count=b.dhw_air_count,
+                                                                             unit_kW=b.dhw_air_unit_kW, source="air"),
+                                                              preheat=PreheatSpec(max_C=b.dhw_preheat_C))))  # type: ignore[arg-type]
+
+
+LADDER = ["S0", "S1", "S2", "S3", "S4", "A1", "A3", "A2+3", "A4", "A6", "A7"]
+
+
 ARCHETYPES: dict[str, Callable[[SiteBasis], Arrangement]] = {
+    "S0": s0_electric_dhw,
+    "S1": s1_ashp_chiller,
+    "S2": s2_ashp_chiller_co2,
+    "S3": s3_four_pipe_air,
+    "S4": s4_chiller_hr_preheat,
     "A1": a1_shared_loop,
     "A2": a2_hr_lthw_buffer,
     "A3": a3_hr_preheat,
@@ -294,3 +374,50 @@ ARCHETYPES: dict[str, Callable[[SiteBasis], Arrangement]] = {
     "A10-nodc": a10_no_dry_cooler,
     "A10-ground": a10_ground_reject,
 }
+
+
+def autosize(site: SiteBasis, peaks: dict[str, float], mean_dhw_kW: float = 0.0) -> SiteBasis:
+    """Size every fleet the user has not set explicitly, from the project's peak loads [A-052].
+
+    Rules (design-stage defaults; set the fields in project.yaml `site:` to override):
+      WSHP fleet (heating basis): count 3; unit = max(1.15·peak CHW / 0.78, 1.15·peak LTHW) / 3
+      DHW heat pumps: count 3; unit = 1.1·peak DHW / 3 (calorifier sized for 1 h of peak)
+      Loop ASHP: count 4; total = 1.2 × (0.8·peak LTHW + 0.75·peak DHW)
+      ASHP rejection: count 4; total (condenser basis) = 1.2 × 1.25·peak CHW
+      Dry cooler: 0.8 × 1.25·peak CHW
+      Buffer: 1 h of peak heat-recovery heat across 30 K, minimum 2 m³
+      Calorifier: 1 h of peak DHW, usable fraction 0.75 across store − 10 °C
+      Stand-alone: LTHW ASHP 2 units totalling 1.2·peak LTHW; chillers 2 units totalling
+      1.2 × 1.25·peak CHW (condenser basis); HT air DHW 3 units totalling 1.1·peak DHW;
+      CO₂ ceil(1.1·peak DHW / unit)
+      Greywater: 20 % of mean DHW
+    """
+    set_ = site.model_fields_set
+    L, C, D = peaks.get("LTHW", 0.0), peaks.get("CHW", 0.0), peaks.get("DHW", 0.0)
+    up: dict[str, object] = {}
+
+    def put(k: str, v: object) -> None:
+        if k not in set_:
+            up[k] = v
+
+    put("cooling_count", 3)
+    put("cooling_unit_kW", max(1.15 * C / 0.78, 1.15 * L, 10.0) / 3)
+    put("dhw_count", 3)
+    put("dhw_unit_kW", max(1.1 * D / 3, 5.0))
+    put("ashp_count", 4)
+    put("ashp_unit_kW", max(1.2 * (0.8 * L + 0.75 * D) / 4, 5.0))
+    put("ashp_cooling_count", 4)
+    put("ashp_cooling_unit_kW", max(1.2 * 1.25 * C / 4, 5.0))
+    put("dry_cooler_kW", max(0.8 * 1.25 * C, 5.0))
+    put("dry_cooler_fan_kW", max(0.8 * 1.25 * C, 5.0) * 0.10)
+    put("buffer_m3", max(1.25 * C * 3.6 / (4.18 * 30.0), 2.0))
+    put("calorifier_m3", max(D * 3.6 / (4.18 * (site.dhw_store_C - 10.0) * 0.75), 0.5) if D > 0 else 0.0)
+    put("lthw_ashp_count", 2)
+    put("lthw_ashp_unit_kW", max(1.2 * L / 2, 5.0))
+    put("chiller_count", 2)
+    put("chiller_unit_kW", max(1.2 * 1.25 * C / 2, 5.0))
+    put("dhw_air_count", 3)
+    put("dhw_air_unit_kW", max(1.1 * D / 3, 5.0))
+    put("co2_count", max(int(np.ceil(1.1 * D / site.co2_unit_kW)), 1))
+    put("greywater_kW", 0.2 * mean_dhw_kW)
+    return site.model_copy(update=up)

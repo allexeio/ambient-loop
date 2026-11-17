@@ -74,12 +74,14 @@ class FleetSpec(_S):
     unit_kW: float = 100.0  # rated heating (condenser) output per unit
     sequencing: Literal["lead_lag", "equal_share"] = "lead_lag"
     min_flow_m3s: float | None = None  # per unit, condenser side (rule 4 check)
+    source: Literal["loop", "air", "hr_changeover", "hr_dedicated"] = "loop"  # heating / reheat source
 
 
 class CoolingSpec(FleetSpec):
     """Reversible water-to-water units serving CHW. In heat recovery they condense at hr_flow_C."""
 
     hr_model: ModelSpec | None = None  # simplified mode only: a separate fixed EER for HR mode
+    sink: Literal["loop", "air"] = "loop"  # reject to the ambient loop, or air-cooled (stand-alone chiller)
     hr_target: Literal["none", "lthw", "hr_circuit"] = "none"
     shared_with_heating: bool = False  # the same units also serve LTHW (they compete)
 
@@ -113,7 +115,6 @@ class PreheatSpec(_S):
 
 class DHWGenSpec(FleetSpec):
     type: Literal["wshp", "co2", "cascade", "electric"] = "wshp"
-    source: Literal["loop", "hr_changeover", "hr_dedicated", "air"] = "loop"
     hr_units: int = 1  # for hr_dedicated
     hr_model: ModelSpec | None = None  # simplified mode only: a fixed COP on the HR source
     intermediate_C: float = 45.0  # cascade

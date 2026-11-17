@@ -132,10 +132,24 @@ def run_full(project: Project, arr: Arrangement, inp: FullInputs, *, isolated: b
     tdb = np.asarray(inp.dry_bulb_C, float)
     tm = np.asarray(inp.mains_C, float)
 
-    if arr.loop is None:
-        raise ValueError(f"{arr.id}: full mode needs a loop block (use a sealed loop at fixed temperatures for stand-alone plant)")
-    lf, lr = loop_temperatures(arr, tdb)
-    loop_dT = arr.loop.flow_C - arr.loop.return_C
+    has_loop = arr.loop is not None
+    if has_loop:
+        lf, lr = loop_temperatures(arr, tdb)
+        loop_dT = arr.loop.flow_C - arr.loop.return_C  # type: ignore[union-attr]
+    else:  # stand-alone plant: no ambient loop; nothing may draw on it
+        lf, lr, loop_dT = np.full(H, 25.0), np.full(H, 20.0), 5.0
+    cool_air = bool(arr.cooling and arr.cooling.sink == "air")
+    heat_air = bool((arr.heating and arr.heating.source == "air") or
+                    (arr.cooling and arr.cooling.shared_with_heating and cool_air))
+    gen_air = bool(arr.dhw and arr.dhw.generator.type == "wshp" and arr.dhw.generator.source == "air")
+    reheat_air = bool(arr.dhw and arr.dhw.reheat and arr.dhw.reheat.source == "air")
+    if not has_loop:
+        uses = [n for n, f in (("cooling (sink loop)", arr.cooling and not cool_air), ("LTHW heat pumps on loop", arr.heating and not heat_air),
+                               ("DHW generator on loop", arr.dhw and arr.dhw.generator.type in ("wshp", "cascade") and not gen_air
+                                and arr.dhw.generator.source == "loop"),
+                               ("balancing plant", arr.deficit or arr.surplus)) if f]
+        if uses:
+            raise ValueError(f"{arr.id}: no loop, but these blocks need one: {uses}")
 
     # ---- fleets and COP arrays ----------------------------------------------------------
     env_masks: dict[str, np.ndarray] = {}
@@ -150,8 +164,9 @@ def run_full(project: Project, arr: Arrangement, inp: FullInputs, *, isolated: b
     if qC.sum() > 0 and cool is None:
         raise ValueError(f"{arr.id}: cooling load but no cooling fleet")
     if cool:
-        cop_rej, m1 = cool.model.cop_h(np.full(H, chw_flow), lf)
-        cap_rej = cool.model.capacity_factor(np.full(H, chw_flow), lf)
+        snk_rej = tdb if cool_air else lf
+        cop_rej, m1 = cool.model.cop_h(np.full(H, chw_flow), snk_rej)
+        cap_rej = cool.model.capacity_factor(np.full(H, chw_flow), snk_rej)
         hr_m = build_model(arr.cooling.hr_model, "cooling_hr") if arr.cooling and arr.cooling.hr_model else cool.model
         cop_hr, m2 = hr_m.cop_h(np.full(H, chw_flow), np.full(H, hr_flow))
         cap_hr = cool.model.capacity_factor(np.full(H, chw_flow), np.full(H, hr_flow))
@@ -166,8 +181,9 @@ def run_full(project: Project, arr: Arrangement, inp: FullInputs, *, isolated: b
         else:
             notes.append("No LTHW plant: space heating falls to electric backup.")
     if heat:
-        cop_L, mL = heat.model.cop_h(lr, np.full(H, lthw_flow))
-        cap_L = heat.model.capacity_factor(lr, np.full(H, lthw_flow))
+        src_L = tdb if heat_air else lr
+        cop_L, mL = heat.model.cop_h(src_L, np.full(H, lthw_flow))
+        cap_L = heat.model.capacity_factor(src_L, np.full(H, lthw_flow))
         env_masks["lthw_hp"] = mL
 
     gen = gen1 = reheat = None
@@ -176,8 +192,9 @@ def run_full(project: Project, arr: Arrangement, inp: FullInputs, *, isolated: b
         g = dhw.generator
         gen = _fleet(g, "dhw_gen")
         if g.type == "wshp":
-            cop_Dl, mD = gen.model.cop_h(lr, np.full(H, gflow))
-            cap_Dl = gen.model.capacity_factor(lr, np.full(H, gflow))
+            src_D = tdb if gen_air else lr
+            cop_Dl, mD = gen.model.cop_h(src_D, np.full(H, gflow))
+            cap_Dl = gen.model.capacity_factor(src_D, np.full(H, gflow))
             env_masks["dhw_gen:loop"] = mD
             if g.source in ("hr_changeover", "hr_dedicated"):
                 gh_m = build_model(g.hr_model, "dhw_hr") if g.hr_model else gen.model
@@ -204,7 +221,7 @@ def run_full(project: Project, arr: Arrangement, inp: FullInputs, *, isolated: b
             env_masks["dhw_gen:co2"] = mc
         if dhw.reheat:
             reheat = _fleet(dhw.reheat, "dhw_reheat")
-            cop_R, mR = reheat.model.cop_h(lr, np.full(H, dhw.store_C + 5.0))
+            cop_R, mR = reheat.model.cop_h(tdb if reheat_air else lr, np.full(H, dhw.store_C + 5.0))
             env_masks["dhw_reheat"] = mR
 
     # balancing plant
@@ -264,7 +281,8 @@ def run_full(project: Project, arr: Arrangement, inp: FullInputs, *, isolated: b
     peak_loop = float(np.max(qL + qC * 1.2 + qD))
     pumps: dict[str, Pump] = {}
     if arr.pumps_included:
-        pumps["loop"] = _pump(arr.loop.pump, "loop", peak_loop, loop_dT, arr.loop.fluid, float(np.mean(lr)))
+        if has_loop:
+            pumps["loop"] = _pump(arr.loop.pump, "loop", peak_loop, loop_dT, arr.loop.fluid, float(np.mean(lr)))  # type: ignore[union-attr]
         if arr.chw and qC.max() > 0:
             pumps["chw"] = _pump(arr.chw.pump, "chw", float(qC.max()), arr.chw.return_C - arr.chw.flow_C, arr.chw.fluid, chw_flow)
         if arr.lthw and qL.max() > 0:
@@ -274,7 +292,8 @@ def run_full(project: Project, arr: Arrangement, inp: FullInputs, *, isolated: b
         if dhw:
             pumps["dhw_primary"] = _pump(dhw.pump, "dhw_primary", float(qD.max()), 10.0, "water", dhw.store_C)
     hr_dT = (hr_flow - (arr.buffer.t_return_C if arr.buffer else hr_ret)) if arr.cooling else 5.0
-    rho_cp_loop = get_fluid(arr.loop.fluid).rho(20.0) * get_fluid(arr.loop.fluid).cp(20.0)
+    lfluid = arr.loop.fluid if arr.loop else "water"
+    rho_cp_loop = get_fluid(lfluid).rho(20.0) * get_fluid(lfluid).cp(20.0)
 
     # ---- output arrays --------------------------------------------------------------------
     Z = lambda: np.zeros(H)  # noqa: E731
@@ -284,6 +303,7 @@ def run_full(project: Project, arr: Arrangement, inp: FullInputs, *, isolated: b
         "W_s1", "evap_s1", "int_flow", "R", "W_R", "evap_R", "imm", "cal_in", "cal_out", "cal_loss", "cal_dU",
         "ext_supply", "ground_supply", "ashp_d", "W_ashp", "loop_backup", "dc_r", "W_dc", "tw_r", "W_tw",
         "ground_rej", "ac_r", "W_ac", "unmet_rej", "W_pump_loop", "W_pump_other", "W_bal_pumps",
+        "cond_air", "evap_L_air", "evap_R_air",
         "hr_to_dhw_share")}
     plr: dict[str, list[float]] = {}
     run_mask: dict[str, np.ndarray] = {}
@@ -548,6 +568,15 @@ def run_full(project: Project, arr: Arrangement, inp: FullInputs, *, isolated: b
             o["cal_out"][t] = out
 
         # ---------- 5/6. loop balance ----------
+        if gen_air:  # air-source DHW heat pump: evaporator heat from outdoor air
+            o["evap_gen_air"][t] += o["evap_gen_loop"][t]
+            o["evap_gen_loop"][t] = 0.0
+        if heat_air:
+            o["evap_L_air"][t], o["evap_L"][t] = o["evap_L"][t], 0.0
+        if reheat_air:
+            o["evap_R_air"][t], o["evap_R"][t] = o["evap_R"][t], 0.0
+        if cool_air:
+            o["cond_air"][t], o["cond_rej"][t] = o["cond_rej"][t], 0.0
         ext = o["evap_L"][t] + o["evap_gen_loop"][t] + o["evap_s1"][t] + o["evap_R"][t]
         rej = o["cond_rej"][t]
         if "loop" in pumps:
@@ -722,6 +751,8 @@ def _build_ledger(project, arr, o, qL, qC, qDm, qDc, lthw_ids, chw_ids, dhw_ids,
             led.add_flow("cooling", f"svc:{sid}", -v)
         led.add_flow("cooling", HR, o["cond_hr"])
         led.add_flow("cooling", LOOP, o["cond_rej"])
+        if o["cond_air"].sum() > 0:
+            led.add_flow("cooling", AMB, o["cond_air"])
         led.add_elec("cooling", o["W_cool"])
         for sid, v in chw_split(o["cond_rej"]).items():
             led.derived[f"rejection:{sid}"] = v
@@ -748,6 +779,8 @@ def _build_ledger(project, arr, o, qL, qC, qDm, qDc, lthw_ids, chw_ids, dhw_ids,
     if o["L_hp"].sum() > 0:
         comp("lthw_hp", "heat_pump_fleet", Role.UNIT, w_of(lthw_svc), {Tag.GENERIC})
         led.add_flow("lthw_hp", LOOP, -o["evap_L"])
+        if o["evap_L_air"].sum() > 0:
+            led.add_flow("lthw_hp", AMB, -o["evap_L_air"])
         for sid, v in lthw_split(o["L_hp"]).items():
             led.add_flow("lthw_hp", f"svc:{sid}", v)
         led.add_elec("lthw_hp", o["W_L"])
@@ -781,10 +814,13 @@ def _build_ledger(project, arr, o, qL, qC, qDm, qDc, lthw_ids, chw_ids, dhw_ids,
         if o["R"].sum() > 0:
             comp("dhw_reheat", "reheat", Role.UNIT, w_of(dhw_svc), {Tag.GENERIC})
             led.add_flow("dhw_reheat", LOOP, -o["evap_R"])
+            if o["evap_R_air"].sum() > 0:
+                led.add_flow("dhw_reheat", AMB, -o["evap_R_air"])
             led.add_flow("dhw_reheat", DHWP, o["R"])
             led.add_elec("dhw_reheat", o["W_R"])
-            if (o["R"] - o["W_R"] - o["evap_R"]).any():
-                led.add_flow("dhw_reheat", AMB, -(o["R"] - o["W_R"] - o["evap_R"]))
+            resid = o["R"] - o["W_R"] - o["evap_R"] - o["evap_R_air"]
+            if np.abs(resid).max() > 1e-12:
+                led.add_flow("dhw_reheat", AMB, -resid)
         if o["imm"].sum() > 0:
             comp("dhw_immersion", "electric", Role.UNIT, w_of(dhw_svc))
             led.add_flow("dhw_immersion", DHWP, o["imm"])

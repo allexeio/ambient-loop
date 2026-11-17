@@ -1,0 +1,16 @@
+id: ashp_ht_air_to_water
+label: High-temperature air-to-water heat pump (R290 / R744-free HT), DHW duty up to 75 °C
+type: air_source
+tag: generic
+eta: 0.42
+approach_evap_K: 8.0
+approach_cond_K: 2.0
+cap_per_K_src: 0.025
+rated_src_C: 7.0
+defrost_band_C: [-3.0, 5.0]
+defrost_derate: 0.10
+envelope: {src_lvg_C: [-20, 35], snk_lvg_C: [30, 75]}
+part_load: {plr: [0.25, 0.5, 0.75, 1.0], mult: [0.95, 1.02, 1.02, 1.0], plr_min: 0.30, cd: 0.9}
+ref: >
+  Generic HT air-source unit. η 0.42 gives COP ≈ 2.6 at A7/W65, in the range of published
+  propane HT units (2.4–2.9 at A7/W65) [Assumption A-053: verify against the selected product].

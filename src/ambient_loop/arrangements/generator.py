@@ -33,7 +33,15 @@ def propose(site: A.SiteBasis, rec: RecoverySummary, lthw: np.ndarray, chw: np.n
         arr.why = [reason] + arr.why
         out.append((arr, reason))
 
-    add(A.a1_shared_loop(site), "Baseline for every comparison.")
+    add(A.s0_electric_dhw(site), "Lowest-capital reference at the basic end of the ladder.")
+    add(A.s1_ashp_chiller(site), "Basic all-electric plant: separate air-source heating, cooling and DHW, no heat sharing.")
+    if dhw.sum() > 0:
+        add(A.s2_ashp_chiller_co2(site), "CO₂ for DHW without a loop: single lift from cold mains (rule 4b).")
+    if chw.sum() > 0 and lthw.sum() > 0 and _overlap_hours(lthw, chw) > 200:
+        add(A.s3_four_pipe_air(site), f"{_overlap_hours(lthw, chw):,} h/yr of simultaneous LTHW and CHW suit 4-pipe air-source units.")
+    if chw.sum() > 0 and dhw.sum() > 0:
+        add(A.s4_chiller_hr_preheat(site), "Chiller heat recovery to LTHW and DHW preheat, without a loop.")
+    add(A.a1_shared_loop(site), "Shared ambient loop: the reference loop scheme.")
     add(A.a5_cascade(site), "Known-poor cascade kept so the double-lift penalty is explicit (rule 1).")
     cool = float(chw.sum()) / 1e3
     if cool > MATERIAL * heat and (hp + direct) > MATERIAL * heat:

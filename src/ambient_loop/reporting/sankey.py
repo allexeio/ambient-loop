@@ -26,12 +26,19 @@ def flows(led: Ledger) -> list[tuple[str, str, float]]:
     E = lambda k: float(led.elec[k].sum()) / 1e3 if k in led.elec else 0.0  # noqa: E731
     L: list[tuple[str, str, float]] = []
     add = lambda a, b, v: L.append((a, b, v)) if v > 1e-6 else None  # noqa: E731
-    add("Cooling load", "Heat recovery", o.get("cond_hr", 0) - (E("cooling") * o.get("cond_hr", 0) / max(o.get("cond_hr", 0) + o.get("cond_rej", 0), 1e-9)))
-    add("Cooling load", "Ambient loop", o.get("cond_rej", 0) - E("cooling") * o.get("cond_rej", 0) / max(o.get("cond_hr", 0) + o.get("cond_rej", 0), 1e-9))
-    add("Electricity", "Heat recovery", E("cooling") * o.get("cond_hr", 0) / max(o.get("cond_hr", 0) + o.get("cond_rej", 0), 1e-9))
-    add("Electricity", "Ambient loop", E("cooling") * o.get("cond_rej", 0) / max(o.get("cond_hr", 0) + o.get("cond_rej", 0), 1e-9)
-        + E("pump:loop") + E("ashp"))
+    ctot = max(o.get("cond_hr", 0) + o.get("cond_rej", 0) + o.get("cond_air", 0), 1e-9)
+    add("Cooling load", "Heat recovery", o.get("cond_hr", 0) - E("cooling") * o.get("cond_hr", 0) / ctot)
+    add("Cooling load", "Ambient loop", o.get("cond_rej", 0) - E("cooling") * o.get("cond_rej", 0) / ctot)
+    add("Electricity", "Heat recovery", E("cooling") * o.get("cond_hr", 0) / ctot)
+    add("Electricity", "Ambient loop", E("cooling") * o.get("cond_rej", 0) / ctot + E("pump:loop") + E("ashp"))
     add("Outdoor air", "Ambient loop", o.get("ashp_d", 0) - E("ashp"))
+    cair = o.get("cond_air", 0)
+    if cair > 0:  # air-cooled chillers: cooling load and compressor heat go straight outdoors
+        tot_c = cair + o.get("cond_rej", 0) + o.get("cond_hr", 0)
+        add("Cooling load", "Rejected outdoors", cair - E("cooling") * cair / max(tot_c, 1e-9))
+        add("Electricity", "Rejected outdoors", E("cooling") * cair / max(tot_c, 1e-9))
+    add("Outdoor air", "LTHW", o.get("evap_L_air", 0))
+    add("Outdoor air", "DHW primary", o.get("evap_R_air", 0))
     add("Ground / external", "Ambient loop", o.get("ground_supply", 0) + o.get("ext_supply", 0))
     add("Electricity", "Ambient loop", E("loop_backup"))
     add("Ambient loop", "LTHW", o.get("evap_L", 0))

@@ -139,7 +139,26 @@ def schematic(arr: Arrangement) -> tuple[str, list[str]]:
             break
     # cooling fleet
     xf = 250
-    if arr.cooling:
+    if arr.cooling and arr.cooling.sink == "air":
+        c = arr.cooling
+        for k in range(min(c.count, 3)):
+            y = 250 + k * 95
+            s.box(xf + 40, y, 130, 52, f"CH-{k + 1:02d}", f"{c.unit_kW * 0.78:,.0f} kW cooling\n{'air-cooled, 4-pipe HR' if c.hr_target == 'lthw' else 'air-cooled' + (' + HR condenser' if c.hr_target != 'none' else '')}", COL["air"])
+            s.text(xf + 105, y - 4, "≋ air", 9, "middle", col=COL["air"])
+            s.line(xf + 170, y + 18, 470, y + 18, COL["chw"])
+            s.line(xf + 170, y + 34, 462, y + 34, COL["chw"], dashed=True)
+        ylast = 250 + (min(c.count, 3) - 1) * 95
+        s.line(470, 268, 470, max(ylast + 18, 380), COL["chw"])
+        s.line(462, 284, 462, max(ylast + 34, 402), COL["chw"], dashed=True)
+        if c.hr_target != "none":
+            s.line(xf + 105, 250, xf + 105, 170, COL["lthw"])
+            s.line(xf + 113, 250, xf + 113, 178, COL["lthw"], dashed=True)
+        if arr.heating and arr.heating.source == "air":
+            h = arr.heating
+            s.box(40, 190, 150, 44, f"ASHP × {h.count}", f"{h.unit_kW:,.0f} kW each, air source", COL["air"])
+            s.path([(190, 205), (xf + 18, 205), (xf + 18, 170)], COL["lthw"])
+            s.path([(xf + 10, 178), (xf + 10, 220), (190, 220)], COL["lthw"], dashed=True)
+    elif arr.cooling:
         c = arr.cooling
         for k in range(min(c.count, 3)):
             y = 250 + k * 95
@@ -235,6 +254,8 @@ def schematic(arr: Arrangement) -> tuple[str, list[str]]:
             s.line(720, 500, 760, 500, COL["lthw"])
             s.line(660, 530, 660, yL, COL["loop"])
             note(610, 466, "Double lift with generated intermediate heat: shown as a known-poor baseline (rule 1).")
+        elif g.source == "air":
+            s.text(830, 545, "air source (rooftop)", 9, "middle", col=COL["air"])
         elif g.source in ("hr_changeover", "hr_dedicated"):
             s.path([(830, 470), (830, 330), (560, 330)], COL["lthw"])
             s.line(820, 530, 820, yL, COL["loop"], dashed=g.source == "hr_dedicated")
@@ -247,6 +268,8 @@ def schematic(arr: Arrangement) -> tuple[str, list[str]]:
                 note(860, 560, "DHW heat pumps stay on the ambient loop and top up from the preheat outlet: each kWh of recovered "
                      "heat is used once, with no second compressor stage.")
         if d.reheat:
-            s.box(960, 380, 120, 50, "Circulation reheat", f"{d.reheat.count} × {d.reheat.unit_kW:,.0f} kW")
-            s.line(1020, 430, 1020, yL, COL["loop"])
+            s.box(960, 380, 120, 50, "Circulation reheat", f"{d.reheat.count} × {d.reheat.unit_kW:,.0f} kW"
+                  + (", air source" if d.reheat.source == "air" else ""))
+            if d.reheat.source != "air":
+                s.line(1020, 430, 1020, yL, COL["loop"])
     return s.render(notes, f"{arr.id}: {arr.title}"), notes
