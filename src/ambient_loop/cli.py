@@ -155,6 +155,34 @@ def parse_equipment(pdf: Path, model_id: str, label: str = "", out: Path | None 
         typer.echo(f"WARNING {w}")
 
 
+@app.command()
+def study(project_file: Path, out: Path | None = None, workers: int = 0, quick: bool = False,
+          carbon: float = 0.136, tariff: float = 0.25) -> None:
+    """End-to-end study: recovery, generator, scenarios, economics, sensitivity, variants, report."""
+    from ambient_loop.scenarios.study import run_study
+
+    r = run_study(project_file, out, workers or None, quick, carbon, tariff)
+    typer.echo(f"Study written to {r['out']} in {r['summary']['seconds']:.0f} s")
+    for row in sorted(r["summary"]["cases"], key=lambda x: x["electricity_MWh"]):
+        typer.echo(f"  {row['id']:<14} {row['electricity_MWh']:>8,.1f} MWh/yr  ratio {row['system_ratio']:.2f}  "
+                   f"{row['carbon_t']:>6,.0f} tCO2e  capex £{row['capex_gbp'] / 1e3:,.0f}k")
+
+
+@app.command()
+def optimise(project_file: Path, archetype: str = "A2+3", objective: str = "electricity_MWh",
+             bounds: str = "buffer.volume_m3=1:40,dhw.preheat.max_C=30:45", maxiter: int = 10) -> None:
+    """Differential-evolution optimisation of arrangement fields (dotted paths)."""
+    from ambient_loop.scenarios.economics import Economics
+    from ambient_loop.scenarios.run import arrangements_for, load_context
+    from ambient_loop.scenarios.sweep import optimise as opt
+
+    ctx = load_context(project_file)
+    arr = arrangements_for(ctx, [archetype])[0]
+    b = {k: tuple(float(x) for x in v.split(":")) for k, v in (kv.split("=") for kv in bounds.split(","))}
+    best, pt, hist = opt(ctx, arr, b, Economics.default(ctx.project.capex), objective, maxiter)  # type: ignore[arg-type]
+    typer.echo(f"{len(hist)} evaluations. Best {objective} = {getattr(pt, objective):,.2f} at {best}")
+
+
 @app.command("inspect-workbook")
 def inspect_cmd(workbook: Path, rows: int = 8) -> None:
     """Print sheets and first rows of a workbook (to build a mapping for a new layout)."""

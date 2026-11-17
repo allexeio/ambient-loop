@@ -219,3 +219,66 @@ def heatmap(hourly: np.ndarray, unit: str, width: int = 900, height: int = 220) 
         out.append(f'<text x="{ml + d * cw + 2:.1f}" y="{height - 6}" font-size="10" fill="var(--muted)">{MONTHS[i]}</text>')
     out.append("</svg>")
     return f'<div class="chart">{"".join(out)}</div><p class="note">Darkest cell = {vmax:,.0f} {esc(unit)}.</p>'
+
+
+def scatter(points: Sequence[tuple[float, float, str]], xlabel: str, ylabel: str, front: Sequence[str] = (),
+            width: int = 900, height: int = 340) -> str:
+    """Scatter (e.g. capex vs carbon) on linear scales; points in `front` are highlighted and joined."""
+    if not points:
+        return ""
+    xs = np.array([p[0] for p in points])
+    ys = np.array([p[1] for p in points])
+    x0, x1 = float(xs.min()), float(xs.max())
+    y0, y1 = float(ys.min()), float(ys.max())
+    padx = (x1 - x0) * 0.08 or 1.0
+    pady = (y1 - y0) * 0.1 or 1.0
+    x0, x1, y0, y1 = x0 - padx, x1 + padx, y0 - pady, y1 + pady
+    ml, mr, mt, mb = 70, 16, 16, 40
+    pw, ph = width - ml - mr, height - mt - mb
+    X = lambda v: ml + pw * (v - x0) / (x1 - x0)  # noqa: E731
+    Y = lambda v: mt + ph - ph * (v - y0) / (y1 - y0)  # noqa: E731
+    out = [f'<svg viewBox="0 0 {width} {height}" role="img" aria-label="scatter">']
+    for k in range(5):
+        yv = y0 + (y1 - y0) * k / 4
+        out.append(f'<line x1="{ml}" x2="{width - mr}" y1="{Y(yv):.1f}" y2="{Y(yv):.1f}" stroke="var(--rule)"/>')
+        out.append(f'<text x="{ml - 6}" y="{Y(yv) + 4:.1f}" font-size="11" text-anchor="end" fill="var(--muted)">{yv:,.0f}</text>')
+        xv = x0 + (x1 - x0) * k / 4
+        out.append(f'<text x="{X(xv):.1f}" y="{height - 22}" font-size="11" text-anchor="middle" fill="var(--muted)">{xv:,.0f}</text>')
+    out.append(f'<text x="{ml + pw / 2}" y="{height - 4}" font-size="11.5" text-anchor="middle" fill="var(--muted)">{esc(xlabel)}</text>')
+    out.append(f'<text x="12" y="{mt + ph / 2}" font-size="11.5" text-anchor="middle" fill="var(--muted)" transform="rotate(-90 12 {mt + ph / 2})">{esc(ylabel)}</text>')
+    fpts = sorted([p for p in points if p[2] in front], key=lambda p: p[0])
+    if len(fpts) > 1:
+        d = " ".join(f"{X(p[0]):.1f},{Y(p[1]):.1f}" for p in fpts)
+        out.append(f'<polyline points="{d}" fill="none" stroke="var(--c2)" stroke-width="2"/>')
+    for x, y, lab in points:
+        on = lab in front
+        out.append(f'<circle cx="{X(x):.1f}" cy="{Y(y):.1f}" r="{6 if on else 4.5}" fill="{"var(--c2)" if on else "var(--c1)"}" fill-opacity="{1 if on else 0.6}"><title>{esc(lab)}: {x:,.0f}, {y:,.1f}</title></circle>')
+        if on or len(points) <= 16:
+            out.append(f'<text x="{X(x) + 8:.1f}" y="{Y(y) - 6:.1f}" font-size="10.5" fill="var(--text)">{esc(lab)}</text>')
+    out.append("</svg>")
+    return f'<div class="chart">{"".join(out)}</div>'
+
+
+def tornado_chart(base: float, rows: Sequence[tuple[str, float, float]], unit: str, width: int = 900) -> str:
+    """Horizontal tornado: change from base for low and high settings of each driver."""
+    if not rows:
+        return ""
+    h = 30 * len(rows) + 50
+    m = max(max(abs(a), abs(b)) for _, a, b in rows) or 1.0
+    ml, mr = 300, 30
+    pw = width - ml - mr
+    cx = ml + pw / 2
+    X = lambda v: cx + (pw / 2) * v / m  # noqa: E731
+    out = [f'<svg viewBox="0 0 {width} {h}" role="img" aria-label="tornado chart">']
+    out.append(f'<line x1="{cx}" x2="{cx}" y1="10" y2="{h - 30}" stroke="var(--text)"/>')
+    for i, (name, lo, hi) in enumerate(rows):
+        y = 16 + i * 30
+        for v, col in ((lo, "var(--c1)"), (hi, "var(--c2)")):
+            x = min(X(0), X(v))
+            out.append(f'<rect x="{x:.1f}" y="{y}" width="{abs(X(v) - X(0)):.1f}" height="20" fill="{col}"><title>{esc(name)}: {v:+,.1f} {esc(unit)}</title></rect>')
+        out.append(f'<text x="{ml - 8}" y="{y + 14}" font-size="12" text-anchor="end" fill="var(--text)">{esc(name)}</text>')
+    for v in (-m, -m / 2, 0, m / 2, m):
+        out.append(f'<text x="{X(v):.1f}" y="{h - 12}" font-size="11" text-anchor="middle" fill="var(--muted)">{v:+,.0f}</text>')
+    out.append("</svg>")
+    return (f'<div class="chart">{"".join(out)}</div>' + legend(["Low setting", "High setting"])
+            + f'<p class="note">Change in annual electricity against the central case of {base:,.0f} {esc(unit)}.</p>')

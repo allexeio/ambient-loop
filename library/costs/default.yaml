@@ -1,0 +1,20 @@
+# Capital-proxy cost table — INDICATIVE ONLY, for ranking options, not for cost plans.
+# Supply-and-install order-of-magnitude rates (London, 2026), Milieu toolkit placeholders
+# [Assumption A-046]. Replace with QS rates per project via project.yaml `capex:` overrides.
+currency: GBP
+basis: "Indicative design-stage proxy; excludes builder's work, enabling, fees, VAT, risk."
+rates:
+  wshp_per_kW: 380          # water-to-water reversible units, per kW heating output
+  dhw_hp_per_kW: 650        # high-temperature DHW heat pumps
+  co2_hp_per_kW: 1400       # packaged CO2 hot-water units
+  ashp_per_kW: 420          # rooftop air-to-water heat pumps
+  ashp_cooling_per_kW: 300  # air-cooled chillers used for rejection
+  dry_cooler_per_kW: 90
+  tower_per_kW: 70
+  buffer_per_m3: 2200       # stratified primary store incl. diffusers and sensors
+  calorifier_per_m3: 4500
+  phx_preheat_item: 25000   # WRAS-approved double-wall PHX package incl. pumps and controls
+  hr_circuit_item: 60000    # changeover valves (6-port pairs), HR pipework, controls per scheme
+  borehole_per_m: 75
+  greywater_hx_item: 90000
+  pump_per_kW_design: 900

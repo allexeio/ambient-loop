@@ -50,3 +50,9 @@ apply to each run.
 | A-043 | Default borehole field 40 × 200 m | Placeholder for comparison | Ground variants | Assumption |
 | A-044 | Generator capacity limits respected; DHW shortfall goes to immersion (flagged) | Design principle | Backup hours | Adopted |
 | A-045 | Floating-loop variant reset: 18 °C at −5 °C, 22 °C at 10 °C, 30 °C at 25 °C dry bulb | Illustrative | A9-float only | Assumption |
+| A-046 | Capital proxy rates in library/costs/default.yaml (e.g. WSHP £380/kW, DHW HP £650/kW, CO₂ £1,400/kW, buffer £2,200/m³) | Order-of-magnitude placeholders for ranking only | Capex and Pareto ranking | Assumption, replace with QS rates |
+| A-047 | Carbon factor 0.136 kgCO₂e/kWh (SAP 10.2) unless an hourly series is supplied | Part L 2021 / GLA basis; verify against the guidance edition in force | Carbon figures | Verify at submission |
+| A-048 | Flat tariff £0.25/kWh unless a time-of-use profile is supplied | Placeholder | Running cost | Assumption |
+| A-049 | Generator thresholds: material opportunity > 2 % of heat demand; LTHW/CHW overlap > 500 h for a 4-pipe HRC; DHW share > 40 % for CO₂ | Engineering judgement | Which candidates are proposed | Adopted, review |
+| A-050 | Sensitivity ranges: η ±10 %, demands ±20 %, mains ±3 K, loop ±2 K, pump head ±30 %, outdoor ±1.5 K; independent sampling | Engineering judgement | Tornado and Monte Carlo | Adopted, review |
+| A-051 | Climate variant is a uniform dry-bulb offset unless a future weather file (e.g. CIBSE DSY/TRY 2050) is supplied | Proxy | Climate variants | Assumption |
