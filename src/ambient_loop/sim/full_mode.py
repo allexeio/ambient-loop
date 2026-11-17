@@ -138,7 +138,6 @@ def run_full(project: Project, arr: Arrangement, inp: FullInputs, *, isolated: b
     loop_dT = arr.loop.flow_C - arr.loop.return_C
 
     # ---- fleets and COP arrays ----------------------------------------------------------
-    flags: dict[str, np.ndarray] = {}
     env_masks: dict[str, np.ndarray] = {}
     chw_flow = arr.chw.flow_C if arr.chw else 7.0
     lthw_flow = arr.lthw.flow_C if arr.lthw else 45.0
@@ -339,7 +338,7 @@ def run_full(project: Project, arr: Arrangement, inp: FullInputs, *, isolated: b
                     dhw_src_evap_demand = dhw_src_cond_demand * (1 - 1 / ce_d)
                 else:
                     dhw_src_evap_demand = 0.0
-                def pre_frac(t_source: float) -> float:
+                def pre_frac(t_source: float, tmt: float = tmt) -> float:
                     t_out = min(t_source - pre.approach_K, pre.max_C)  # type: ignore[union-attr]
                     return max(0.0, (t_out - tmt) / max(dhw.store_C - tmt, 1.0))  # type: ignore[union-attr]
 

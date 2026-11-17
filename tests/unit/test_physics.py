@@ -1,15 +1,15 @@
 import numpy as np
 import pytest
 
+from ambient_loop.core.provenance import Tag
 from ambient_loop.physics.fluids import get_fluid, htc_factor, pressure_drop_factor
 from ambient_loop.physics.ground import BoreholeField
 from ambient_loop.physics.library import build_model
-from ambient_loop.physics.performance import CarnotModel, CO2Model, Fleet, MapModel, PartLoad
+from ambient_loop.physics.performance import CarnotModel, Fleet, MapModel, PartLoad
 from ambient_loop.physics.pumps import Pump, max_dT_from_min_flow
 from ambient_loop.physics.rejection import DryCooler, wet_bulb_stull
 from ambient_loop.physics.store import StratifiedStore
 from ambient_loop.schema.arrangement import ModelSpec
-from ambient_loop.core.provenance import Tag
 
 
 def test_water_properties_match_iapws():

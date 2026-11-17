@@ -60,7 +60,6 @@ def test_every_archetype_closes_energy_and_allocation(aid):
 
 def test_preheat_and_buffer_beat_shared_loop():
     p, i = project(), inputs()
-    base = run_case(p, ARCHETYPES["A1"](SITE), i, DhwProfile.SHAPED)
     pre = run_case(p, ARCHETYPES["A2+3"](SITE), i, DhwProfile.SHAPED)
     assert pre.result.ledger.derived["o:hr_P"].sum() > 0
     assert pre.result.ledger.derived["o:buf_ch"].sum() > 0

@@ -183,6 +183,29 @@ def optimise(project_file: Path, archetype: str = "A2+3", objective: str = "elec
     typer.echo(f"{len(hist)} evaluations. Best {objective} = {getattr(pt, objective):,.2f} at {best}")
 
 
+@app.command()
+def ui(port: int = 8501) -> None:
+    """Launch the Streamlit interface."""
+    import subprocess
+    import sys
+
+    app_path = Path(__file__).parent / "ui" / "app.py"
+    subprocess.run([sys.executable, "-m", "streamlit", "run", str(app_path), "--server.port", str(port),
+                    "--server.headless", "true"], check=False)
+
+
+@app.command()
+def departure(project_file: Path, archetype: str = "A1") -> None:
+    """Show step by step how full-physics mode departs from the workbook simple mode (brief §9.1)."""
+    from ambient_loop.scenarios.run import load_context
+    from ambient_loop.validation.departure import departure as dep
+
+    ctx = load_context(project_file)
+    for r in dep(ctx, archetype):
+        d = "" if r["delta_MWh"] is None else f"{r['delta_MWh']:+7.1f}"
+        typer.echo(f"  {r['step']:<60} {r['electricity_MWh']:>8.1f} {d}  ratio {r['ratio']:.2f}")
+
+
 @app.command("inspect-workbook")
 def inspect_cmd(workbook: Path, rows: int = 8) -> None:
     """Print sheets and first rows of a workbook (to build a mapping for a new layout)."""

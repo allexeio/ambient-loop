@@ -19,9 +19,9 @@ from typing import Any
 import numpy as np
 from scipy.optimize import differential_evolution
 
-from ambient_loop.schema.arrangement import Arrangement
 from ambient_loop.scenarios.economics import Economics, capex
 from ambient_loop.scenarios.run import ProjectContext, load_context
+from ambient_loop.schema.arrangement import Arrangement
 from ambient_loop.sim.full_mode import run_arrangement
 
 

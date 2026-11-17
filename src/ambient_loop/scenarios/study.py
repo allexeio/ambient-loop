@@ -100,6 +100,19 @@ def run_study(project_file: Path, out: Path | None = None, workers: int | None =
     page = scenario_report(p, cases, [f"run {man['config_hash']}", man["timestamp_utc"],
                                       f"code {man['code_version']} ({man['git_sha']})"], line, sections)
     (out / "study.html").write_text(page)
+    from ambient_loop.io.export.xlsx import export_case, export_csv
+    from ambient_loop.reporting.case_report import case_page, compare_page
+    detail = out / "cases"
+    detail.mkdir(exist_ok=True)
+    meta = [f"run {man['config_hash']}", man["timestamp_utc"]]
+    ranked = sorted(cases, key=lambda c: c.electricity_MWh)
+    for c in ranked[: min(len(ranked), 6)] + ([base] if base not in ranked[:6] else []):
+        safe = c.arrangement.id.replace("+", "_").replace("/", "_")
+        (detail / f"{safe}.html").write_text(case_page(p, c, meta))
+        export_case(p, c, ctx.inputs.demand_kW, ctx.inputs.dry_bulb_C, man, detail / f"{safe}.xlsx")
+        export_csv(c, detail / f"{safe}_hourly.csv")
+    cmp_set = [base] + [c for c in ranked if c is not base][:3]
+    (out / "compare.html").write_text(compare_page(p, cmp_set, meta))
     summary = {"manifest": man, "cases": [c.row() | eco[c.arrangement.id] for c in cases],
                "findings": {c.arrangement.id: [asdict(f) for f in c.findings] for c in cases},
                "pareto": front, "seconds": time.perf_counter() - t0}

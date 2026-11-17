@@ -1,16 +1,32 @@
 # Assumptions register
 
-Each entry has an ID, a status and its effect on results. The CLI and UI print the entries that
-apply to each run.
+Every assumption the toolkit's results rest on. Each entry has an ID, its basis, its effect on
+results and a status. The CLI, UI and reports print the register, and the code cites the IDs
+where each assumption enters (search for `A-0xx`).
+
+## Review session: priority order (proposed for the pre-launch interrogation)
+
+| Priority | IDs | Why it matters |
+|---|---|---|
+| 1 | A-040, A-014, A-019 | The heat-recovery EER at 45 °C condensing comes from a generic η = 0.49 model (≈3.0), not the brief's 4.5. This is the largest single driver of the gap between simplified and full-physics results for archetypes 2/3/4/6. Get the CXWF 078 (or equivalent) map at 10 °C CHW / 45 °C condensing. |
+| 2 | Data: the DHW profile (rule 6) | The fixture DHW is effectively flat (median peak hour 4.2 % of daily). Recovery and storage benefits, plant duty and immersion hours all depend on the shape. |
+| 3 | A-041 | Definition of "no loop changeover". The brief's 956 MWh is not reproduced under the toolkit's definition. |
+| 4 | A-023, A-022, A-033 | CO₂ performance is a three-point fit, not a Data Book map; the circulation-loss share is assumed. The CO₂ archetype ranks first, so it carries the most decision weight. |
+| 5 | A-020, A-024, A-038 | Pump modelling basis (pumps are about 2–3 % of electricity here). |
+| 6 | A-046, A-047, A-048 | Capex, carbon factor and tariff: indicative placeholders. |
+| 7 | A-039, A-007 | Targets and their basis; client-data handling. |
+| 8 | All others | Screening and secondary effects. |
+
+## Register
 
 | ID | Assumption | Basis | Effect on results | Status |
 |---|---|---|---|---|
-| A-001 | ΔT_min defaults: liquid–liquid 2 K, air–liquid 5 K, via store 2 × 2 K | Typical plate HX and coil approaches | Changes direct-recovery potential only (§3.1) | Proposed |
-| A-002 | Pinch band width 2.5 K for heat-pump-assisted matching | Resolution vs runtime | Small; tested for sensitivity | Proposed |
-| A-003 | Greedy minimum-lift matching for HP-assisted potential | Heuristic; LP cross-check on sampled days | Potential is a screening figure, not a design figure | Proposed |
+| A-001 | ΔT_min defaults: liquid–liquid 2 K, air–liquid 5 K, via store 2 × 2 K | Typical plate HX and coil approaches | Changes direct-recovery potential only (§3.1) | Adopted |
+| A-002 | Pinch band width 2.5 K for heat-pump-assisted matching | Resolution vs runtime | Small | Adopted |
+| A-003 | Greedy minimum-lift matching for HP-assisted potential | Heuristic; LP cross-check on sampled days | Potential is a screening figure, not a design figure | Adopted |
 | A-004 | Fixture 1 "overall ratio" = (heat + coolth delivered) / electricity | Arithmetic on brief figures (2,912.4 / 926 = 3.145) | Convention must be labelled in every report | Confirmed by arithmetic |
-| A-005 | Fluid properties from Melinder (2010) / ASHRAE Fundamentals ch.31 correlations | Published data; avoids a CoolProp dependency | Expect within ~1–2 % of tabulated values; unit-tested | Proposed |
-| A-006 | Default VSD pump and motor efficiency curve | EN 50598 IE classes | Pump energy; replace with selection data when available | Proposed |
+| A-005 | Fluid properties from Melinder (2010) / ASHRAE Fundamentals ch.31 correlations | Published data; avoids a CoolProp dependency | — | Superseded by A-017 (CoolProp-generated tables) |
+| A-006 | Default VSD pump and motor efficiency curve | EN 50598 IE classes | — | Superseded by A-024 |
 | A-007 | Client inputs (`inputs/`, `projects/fixture1/`) are git-ignored; the Fixture 1 regression test skips without them | Confidentiality | None on results | Adopted (provisional answer, not yet confirmed) |
 | A-008 | A bare number in a project file is tagged [Assumption] until a source is given | Conservative provenance | Headline tags only | Adopted |
 | A-009 | Dry cooler available when dry bulb ≤ cutoff (inclusive) | Matches workbook column AM | Hours at exactly 27.0 °C | Adopted |

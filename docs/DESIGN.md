@@ -1,8 +1,10 @@
 # Design — Heat Recovery & Ambient Loop Scenario Toolkit
 
-Status: **Phase 1 built** (simple mode, ledger, allocation, workbook importer; Fixture 1
-reproduced exactly — see `docs/FIXTURE1_MAPPING.md`). Sections 3–5 remain the plan for
-Phases 2–4. Original proposal text follows. Nothing below is built yet. It answers the brief's
+Status: **all six phases built (v1)**. As built, the design follows this proposal with these
+changes: CoolProp-generated fluid tables instead of hand-coded correlations (A-017); the
+arrangement graph is held as composable blocks (schema/arrangement.py) rather than a free-form
+graph, and the engine interprets the blocks; a schedule-based floating loop rather than a
+state-based one. The original proposal text follows. Nothing below is built yet. It answers the brief's
 opening ask: package structure, data schema, and the pinch/recovery method, plus how Fixture 1
 will be used to confirm the approach before the full engine is written.
 

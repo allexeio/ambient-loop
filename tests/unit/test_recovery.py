@@ -90,8 +90,10 @@ def test_greedy_matches_lp_for_lossless_store(seed):
     A, b = [], []
     for t in range(T):
         row = np.r_[np.where(np.arange(T) <= t, 1, 0), np.where(np.arange(T) <= t, -1, 0)]
-        A.append(row); b.append(cap)
-        A.append(-row); b.append(0.0)
+        A.append(row)
+        b.append(cap)
+        A.append(-row)
+        b.append(0.0)
     res = linprog(np.r_[np.zeros(T), -np.ones(T)], A_ub=np.array(A), b_ub=b,
                   bounds=[(0, x) for x in s] + [(0, x) for x in n], method="highs")
     best = -res.fun

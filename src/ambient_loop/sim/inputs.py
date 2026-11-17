@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import numpy as np
 
@@ -12,6 +13,9 @@ from ambient_loop.io.weather import read_epw_dry_bulb, read_table_dry_bulb
 from ambient_loop.loads.validation import Warning_, classify_dhw, validate_loads
 from ambient_loop.schema.project import Project
 from ambient_loop.sim.simple_mode import SimpleInputs
+
+if TYPE_CHECKING:
+    from ambient_loop.sim.full_mode import FullInputs
 
 
 def build_inputs(
@@ -46,7 +50,7 @@ def build_inputs(
     return SimpleInputs(demand_kW=demand, dry_bulb_C=db), profile, warnings, files
 
 
-def build_full_inputs(project: Project, base: Path) -> tuple["FullInputs", DhwProfile, list[Warning_], list[Path]]:
+def build_full_inputs(project: Project, base: Path) -> tuple[FullInputs, DhwProfile, list[Warning_], list[Path]]:
     """Inputs for full mode: adds mains water temperature and any extra load-table columns."""
     from ambient_loop.core.series import as_hourly
     from ambient_loop.sim.full_mode import FullInputs

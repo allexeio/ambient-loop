@@ -271,7 +271,7 @@ def r10(ctx: Context) -> list[Finding]:
             med = float(np.median(plr[name])) if plr.get(name) else float("nan")
             sev = "warn" if r > 1.5 or (np.isfinite(med) and med < 0.35) else "info"
             out.append(F("R10", sev, f"{name}: installed {inst:,.0f} kW vs peak {peak:,.0f} kW (ratio {r:.2f}); "
-                         f"median lead-unit PLR {med:.2f}, sequencing {getattr(a.dhw.generator if name == 'dhw_gen' else a.cooling, 'sequencing')}.",
+                         f"median lead-unit PLR {med:.2f}, sequencing {(a.dhw.generator if name == 'dhw_gen' else a.cooling).sequencing}.",
                          plant_to_peak=r, median_plr=med))
     return out
 
