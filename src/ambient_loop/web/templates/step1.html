@@ -1,0 +1,23 @@
+{% extends "base.html" %}{% block content %}
+<div><div class="tag">STEP 01 — DESCRIBE THE BUILDING</div><h1>What is the building?</h1>
+<p class="lead">Describe the building in your own words and attach anything useful: an area schedule, BRUKL reports, a brief.</p></div>
+<form class="panel" method="post" action="/p/{{ p.id }}/1" enctype="multipart/form-data">
+<label>Description<textarea name="description" placeholder="e.g. 14-storey hotel, 320 keys over 12,000 m², ground-floor restaurant and bar, 80 serviced apartments on the upper floors...">{{ p.description }}</textarea></label>
+<label>Attachments (area schedule CSV/XLSX, BRUKL or brief PDF)<input type="file" name="files" multiple></label>
+<div class="row"><button name="action" value="analyse">{{ 'Read with Claude' if ai_on else 'Read area schedule' }}</button>
+<span class="note">Uploaded: {{ p.uploads|join(', ') or 'none' }}</span></div></form>
+{% if p.ai.observations or p.ai.questions %}<div class="panel"><h2>What Claude found</h2>
+{% for o in p.ai.observations %}<p>· {{ o }}</p>{% endfor %}
+{% if p.ai.questions %}<h3>Questions to answer</h3>{% for q in p.ai.questions %}<p>? {{ q }}</p>{% endfor %}{% endif %}</div>{% endif %}
+<form class="panel" method="post" action="/p/{{ p.id }}/zones"><h2>Zones</h2>
+<p class="note">Check and edit. Areas in m² GIA; occupants as design occupants or beds.</p>
+<div class="tw"><table><thead><tr><th>Zone</th><th>Space type</th><th class="n">Area m²</th><th class="n">Occupants</th><th>Source</th><th></th></tr></thead><tbody>
+{% for z in p.zones + [{'name':'','space_type':'other','area_m2':'','occupants':'','notes':''}] %}
+<tr><td><input name="name" value="{{ z.name }}" placeholder="Add a zone"></td>
+<td><select name="space_type">{% for k, s in space_types.items() %}<option value="{{ k }}" {{ 'selected' if z.space_type==k }}>{{ s.label }}</option>{% endfor %}</select></td>
+<td class="n"><input type="number" step="any" name="area_m2" value="{{ z.area_m2 }}"></td>
+<td class="n"><input type="number" step="any" name="occupants" value="{{ z.occupants }}"></td>
+<td class="note">{{ z.notes }}<input type="hidden" name="notes" value="{{ z.notes }}"></td><td></td></tr>{% endfor %}
+</tbody></table></div>
+<div class="row"><button>Save zones and continue</button><span class="note">Blank zone names are removed.</span></div></form>
+{% endblock %}

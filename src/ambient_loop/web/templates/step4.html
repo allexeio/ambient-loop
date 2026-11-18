@@ -1,0 +1,22 @@
+{% extends "base.html" %}{% block content %}
+<div><div class="tag">STEP 04 — PLANT SCENARIOS</div><h1>Every central-plant strategy, tested</h1>
+<p class="lead">Each combination of heating, cooling and hot-water plant is simulated over 8,760 hours with temperature- and part-load-dependent performance.</p></div>
+<div class="panel"><div class="row"><button hx-post="/p/{{ p.id }}/4/run" hx-target="body" hx-indicator="#sp">{{ 'Re-run' if p.screen else 'Run' }} the scenarios</button><span id="sp" class="spin note">Simulating every strategy (about a minute)…</span></div>
+{% if rates_placeholder %}<div class="banner">Costs use placeholder rates until the Milieu rate table is loaded.</div>{% endif %}</div>
+{% if p.screen %}
+{% set best = p.screen[0] %}
+<div class="kpis"><div class="kpi"><span class="tag">Lowest carbon (compatible)</span><span class="v">{{ '%.0f'|format(best.carbon_t) }}</span><span class="d">tCO₂e/yr · {{ best.title }}</span></div>
+<div class="kpi"><span class="tag">Strategies tested</span><span class="v">{{ p.screen|length }}</span><span class="d">{{ p.screen|selectattr('compatible')|list|length }} compatible with the terminals</span></div></div>
+<form class="panel" method="post" action="/p/{{ p.id }}/4/select"><h2>Results</h2>
+<p class="note">Tick up to three for the step 5 comparison. Sorted by carbon; incompatible strategies are listed last, with the reason.</p>
+<div class="tw"><table><thead><tr><th></th><th>Strategy</th><th class="n">Elec MWh</th><th class="n">Gas MWh</th><th class="n">tCO₂e</th><th class="n">System eff.</th><th class="n">Heating</th><th class="n">DHW</th><th class="n">Cooling</th><th class="n">Capex £k</th><th class="n">Roof m²</th><th>Flags</th></tr></thead><tbody>
+{% for r in p.screen %}<tr style="{{ '' if r.compatible else 'opacity:.55' }}"><td><input type="checkbox" name="ids" value="{{ r.id }}" {{ 'checked' if r.id in p.compare }}></td>
+<td>{{ r.title }}{% for n in r.notes %}<div class="note">{{ n }}</div>{% endfor %}</td>
+<td class="n">{{ '{:,.0f}'.format(r.electricity_MWh) }}</td><td class="n">{{ '{:,.0f}'.format(r.gas_MWh) }}</td><td class="n">{{ '{:,.0f}'.format(r.carbon_t) }}</td>
+<td class="n">{{ '%.2f'|format(r.system_eff) }}</td>
+<td class="n">{{ '%.2f'|format(r.service_eff.get('LTHW', 0)) }}</td><td class="n">{{ '%.2f'|format(r.service_eff.get('DHW', 0)) }}</td><td class="n">{{ '%.2f'|format(r.service_eff.get('CHW', 0)) }}</td>
+<td class="n">{{ '{:,.0f}'.format(r.capex_gbp/1000) }}</td><td class="n">{{ '{:,.0f}'.format(r.roof_m2) }}</td>
+<td>{% for k, v in r.flags.items() %}<span class="chip warn">{{ v }} h</span> <span class="note">{{ k }}</span><br>{% endfor %}</td></tr>{% endfor %}
+</tbody></table></div>
+<div class="row"><button>Compare the selected strategies</button><span class="note">Efficiencies here are screening values (pro-rata); step 5 gives the BRUKL basis.</span></div></form>
+{% endif %}{% endblock %}

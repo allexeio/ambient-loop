@@ -8,6 +8,20 @@ ranks them on efficiency, carbon, cost and a capital proxy, and explains why.
 Status: **v1, all six phases built.** Ready for the assumptions review before internal launch
 (see `ASSUMPTIONS.md`, priority table at the top).
 
+## Milieu Labs / Energy Strategy (web walkthrough)
+
+A six-step web app for engineers: describe the building (text, area schedule, BRUKL) → annual
+demands and fresh-air basis → terminal units per space → every central-plant strategy screened
+(gas, VRF, ASHP, 2/4-pipe air-source, air- and water-cooled chillers, ambient loops with WSHPs) →
+up to three compared with schematics, energy flows, cost, carbon and plant space → the chosen one
+written up as a detailed report, a file note and the GLA calculation summary.
+
+```bash
+MILIEU_DATA=./milieu_data uv run ambient-loop web
+```
+
+Deployment, weather files, rates and Claude settings: `docs/DEPLOY.md`.
+
 ## Quick start
 
 ```bash
@@ -34,7 +48,8 @@ uv run pytest
 | `parse-equipment` | Manufacturer selection PDF to a library YAML candidate, marked for review. |
 | `new-project` | Create a project from hourly loads (CSV/XLSX with column mapping) or from benchmark synthesis (building type, GIA, occupants). |
 | `report` | Concise options report and the GLA calculation summary substantiating the SBEM/BRUKL SCOP/SEER inputs (HTML + PDF). |
-| `ui` | Streamlit front end. |
+| `ui` | Streamlit front end (analyst tool). |
+| `web` | Milieu Labs / Energy Strategy walkthrough web app. |
 
 ## Read these
 

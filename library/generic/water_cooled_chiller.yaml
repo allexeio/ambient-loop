@@ -1,0 +1,10 @@
+id: water_cooled_chiller
+label: Water-cooled chiller (screw / scroll), condenser to dry cooler or cooling tower
+type: carnot
+tag: generic
+eta: 0.50
+approach_evap_K: 1.5
+approach_cond_K: 1.5
+envelope: {src_lvg_C: [4, 18], snk_lvg_C: [18, 45]}
+part_load: {plr: [0.25, 0.5, 0.75, 1.0], mult: [0.92, 1.05, 1.04, 1.0], plr_min: 0.15, cd: 0.9}
+ref: "Water-cooled machines sit at η 0.5 on leaving-fluid temperatures (ASHRAE HVAC Systems & Equipment ch. 43) [A-064]."

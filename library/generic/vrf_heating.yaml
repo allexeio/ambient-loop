@@ -1,0 +1,17 @@
+id: vrf_heating
+label: VRF heat recovery system, heating mode (air source, refrigerant distribution)
+type: air_source
+tag: generic
+eta: 0.40
+approach_evap_K: 8.0
+approach_cond_K: 3.0
+cap_per_K_src: 0.025
+rated_src_C: 7.0
+defrost_band_C: [-3.0, 5.0]
+defrost_derate: 0.10
+envelope: {src_lvg_C: [-20, 24], snk_lvg_C: [30, 50]}
+part_load: {plr: [0.25, 0.5, 0.75, 1.0], mult: [1.05, 1.10, 1.05, 1.0], plr_min: 0.15, cd: 0.9}
+ref: >
+  Modelled at an equivalent indoor condensing temperature (sink 40 °C). η 0.40 includes refrigerant
+  pipework losses and gives SCOP about 3.5–4 in the London climate, within the published range for
+  heat-recovery VRF [Assumption A-063: replace with the manufacturer's seasonal data].

@@ -62,4 +62,11 @@ def build_full_inputs(project: Project, base: Path) -> tuple[FullInputs, DhwProf
     df = to_model_year(read_table(lp, project.loads.sheet, project.loads.header_row), project.loads.drop_feb29,
                        source=lp.name)
     cols = {c: df[c].to_numpy(dtype=np.float64) for c in df.columns if np.issubdtype(df[c].dtype, np.number)}
-    return FullInputs(si.demand_kW, si.dry_bulb_C, mains, None, cols), profile, warns, files
+    wb = None
+    wp = base / project.weather.file
+    if project.weather.format == "table":
+        try:
+            wb = hourly_column(to_model_year(read_table(wp, project.weather.sheet, project.weather.header_row)), "wet_bulb_C")
+        except Exception:  # noqa: BLE001 - optional column
+            wb = None
+    return FullInputs(si.demand_kW, si.dry_bulb_C, mains, wb, cols), profile, warns, files

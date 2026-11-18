@@ -86,8 +86,9 @@ def service_ratios(c: CaseResult, convention: str = "incremental", exclude_distr
         tot = np.sum(list(info.service_weights.values()), axis=0)
         for s, w in info.service_weights.items():
             sub[s] = float(np.sum(dist * np.divide(w, tot, out=np.zeros_like(tot), where=tot > 0))) / 1e3
+    gas = {"LTHW": float(np.sum(led.derived.get("o:gas_L", 0))) / 1e3, "DHW": float(np.sum(led.derived.get("o:gas_D", 0))) / 1e3}
     for s, m in c.per_service["pro_rata" if convention == "conservative" else convention].items():
-        e = a.annual()[s] / 1e3 - sub.get(s, 0.0)
+        e = a.annual()[s] / 1e3 - sub.get(s, 0.0) + gas.get(s, 0.0)  # energy input: electricity + gas
         q = m.numerator_kWh / 1e3
         out[s] = {"heat_MWh": q, "elec_MWh": e, "ratio": q / e if e > 0 else float("nan")}
     return out
@@ -262,7 +263,6 @@ def calc_summary(ctx: ProjectContext, c: CaseResult, sens: list[Sens], meta: lis
     sysb = service_ratios(c, "conservative", exclude_distribution=False)   # whole heating system (para 10.8)
     gen = service_ratios(c, "conservative", exclude_distribution=True)     # generation side (information)
     inc = service_ratios(c, "incremental", exclude_distribution=False)
-    pr = service_ratios(c, "pro_rata", exclude_distribution=False)
     labels = {"LTHW": ("Space heating", "SCOP"), "DHW": ("Domestic hot water", "SPF"), "CHW": ("Space cooling", "SEER")}
     r = H.Report(title=f"{p.name}: heat pump seasonal performance",
                  eyebrow="Energy Statement appendix · heat pump calculation summary (GLA guidance para 10.9)",

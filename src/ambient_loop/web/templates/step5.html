@@ -1,0 +1,9 @@
+{% extends "base.html" %}{% block content %}
+<div><div class="tag">STEP 05 — COMPARE STRATEGIES</div><h1>{{ p.compare|length }} strategies side by side</h1>
+<p class="lead">Schematics, energy flows, heat recovery, efficiencies for BRUKL, cost, carbon, plant space and the flow-temperature trade-off.</p></div>
+<div class="panel"><div class="row"><button hx-post="/p/{{ p.id }}/5/build" hx-target="body" hx-indicator="#s5">{{ 'Rebuild' if has_report else 'Build' }} the comparison report</button><span id="s5" class="spin note">Simulating, sweeping temperatures and drafting the report…</span>
+{% if has_report %}<a class="btn ghost" href="/p/{{ p.id }}/out/comparison.html" target="_blank">Open</a>{% if has_pdf %}<a class="btn ghost" href="/p/{{ p.id }}/out/comparison.pdf" target="_blank">PDF</a>{% endif %}{% endif %}</div></div>
+{% if has_report %}<iframe class="frame" src="/p/{{ p.id }}/out/comparison.html"></iframe>
+<form class="panel" method="post" action="/p/{{ p.id }}/5/select"><h2>Choose the strategy</h2><div class="row">
+{% for sid in p.compare %}<label style="grid-auto-flow:column;align-items:center"><input type="radio" name="sid" value="{{ sid }}" {{ 'checked' if p.selected==sid }}> {{ titles[sid] }}</label>{% endfor %}</div>
+<div class="row"><button>Select and continue</button></div></form>{% endif %}{% endblock %}

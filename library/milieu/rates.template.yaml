@@ -1,0 +1,45 @@
+# Milieu rate table TEMPLATE. Copy to $MILIEU_DATA/rates.yaml and replace every value with
+# Milieu QS / tender rates. Until that file exists the app uses these placeholders and shows an
+# "indicative rates" banner on every cost figure [A-046].
+status: placeholder          # set to "milieu" once populated
+source: "Indicative placeholders, not Milieu rates"
+date: "2026-11-18"
+currency: GBP
+capex:                       # supply and install, excl. builder's work, prelims, fees, VAT
+  gas_boiler_per_kW: 90
+  ashp_per_kW: 420           # air-to-water heating-only / balancing ASHP
+  ashp_ht_per_kW: 700        # high-temperature air-source DHW heat pump
+  ashp_4pipe_per_kW: 520     # 4-pipe multifunction unit (per kW cooling)
+  ashp_2pipe_per_kW: 380     # reversible 2-pipe unit (per kW cooling)
+  vrf_per_kW: 650            # VRF heat recovery system incl. branch boxes, per kW cooling (indoor units excluded)
+  chiller_air_per_kW: 300
+  chiller_water_per_kW: 220
+  dry_cooler_per_kW: 90
+  tower_per_kW: 70
+  wshp_per_kW: 380
+  dhw_hp_per_kW: 650
+  co2_hp_per_kW: 1400
+  buffer_per_m3: 2200
+  calorifier_per_m3: 4500
+  phx_preheat_item: 25000
+  hr_circuit_item: 60000
+  ambient_loop_per_m2_gia: 18   # loop pipework, PICVs and branches across the building
+  pump_per_kW_design: 900
+opex:
+  electricity_gbp_per_kWh: 0.25
+  gas_gbp_per_kWh: 0.07
+  maintenance_pct_capex: 1.5
+carbon:                      # kgCO2e/kWh; SAP 10.2 values used in the GLA carbon emissions spreadsheet [A-047]
+  electricity: 0.136
+  gas: 0.210
+space:                       # plant space factors (m² per kW of plant capacity, including access) [A-067]
+  roof_air_source_m2_per_kW: 0.08
+  roof_dry_cooler_m2_per_kW: 0.05
+  roof_tower_m2_per_kW: 0.015
+  plantroom_hp_m2_per_kW: 0.025
+  plantroom_boiler_m2_per_kW: 0.012
+  plantroom_chiller_m2_per_kW: 0.02
+  co2_unit_m2_each: 3.0
+  vrf_condenser_m2_per_kW: 0.06
+  tank_height_to_diameter: 2.0
+  tank_access_m: 1.0

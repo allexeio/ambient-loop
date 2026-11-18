@@ -1,0 +1,2 @@
+{% if p.ai.terminal_review %}<div class="panel"><h2>Claude's review</h2><p>{{ p.ai.terminal_review.overall }}</p>
+<div class="tw"><table><tbody>{% for r in p.ai.terminal_review.reviews %}<tr><td>{{ r.zone }}</td><td>{% if r.agree %}<span class="chip ok">Agree</span>{% else %}<span class="chip warn">Suggest {{ r.suggested_terminal }}</span>{% endif %}</td><td class="note">{{ r.rationale }}</td></tr>{% endfor %}</tbody></table></div></div>{% endif %}

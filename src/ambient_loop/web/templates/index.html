@@ -1,0 +1,14 @@
+{% extends "base.html" %}{% block content %}
+<div class="panel grid-bg"><div class="tag">LABS / ENERGY STRATEGY</div>
+<h1>From building brief to plant strategy and GLA evidence</h1>
+<p class="lead">Describe the building, give its demands, confirm the terminal units, and the tool tests every central-plant strategy hour by hour, then writes the comparison, the file note and the GLA calculation summary.</p></div>
+<div class="panel"><h2>New project</h2>
+<form method="post" action="/projects" class="row">
+<label>Project name<input name="name" required></label>
+<label>Location<input name="location" placeholder="e.g. London EC2"></label>
+<label>Weather file<select name="weather_id">{% for w in weather %}<option value="{{ w.id }}">{{ w.label }}</option>{% else %}<option value="">No weather files loaded (MILIEU_DATA/weather)</option>{% endfor %}</select></label>
+<button>Start</button></form></div>
+<div class="panel"><h2>Projects</h2><div class="list">
+{% for x in projects %}<a href="/p/{{ x.id }}/{{ x.step }}"><span>{{ x.name }} <span class="note">{{ x.location }}</span></span><span class="tag">Step {{ x.step }}</span></a>
+{% else %}<p>No projects yet.</p>{% endfor %}</div></div>
+{% endblock %}

@@ -1,0 +1,9 @@
+id: gas_boiler
+label: Condensing gas boiler (seasonal efficiency)
+type: fixed
+tag: generic
+cop: 0.91
+ref: >
+  Seasonal efficiency 91 % (gross) for condensing boilers on low-temperature LTHW, in line with
+  the Non-Domestic Building Services Compliance Guide range [Assumption A-062: replace with the
+  selected boiler's seasonal efficiency]. "COP" here means heat out ÷ gas in.

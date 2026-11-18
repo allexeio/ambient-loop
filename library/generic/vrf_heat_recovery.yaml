@@ -1,0 +1,10 @@
+id: vrf_heat_recovery
+label: VRF simultaneous heat recovery (refrigerant-to-refrigerant transfer)
+type: carnot
+tag: generic
+eta: 0.42
+approach_evap_K: 2.0
+approach_cond_K: 3.0
+envelope: {src_lvg_C: [2, 20], snk_lvg_C: [30, 50]}
+part_load: {plr: [0.25, 0.5, 0.75, 1.0], mult: [1.0, 1.05, 1.03, 1.0], plr_min: 0.15, cd: 0.9}
+ref: "Heat moved from cooling indoor units to heating indoor units through the branch selector boxes [A-063]."

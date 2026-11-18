@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{% block title %}Milieu Labs / Energy Strategy{% endblock %}</title>
+<link rel="icon" href="/static/brand/labs-monogram-lockup-white.svg">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500&family=Raleway:wght@300;400;500;600;700&display=swap">
+<link rel="stylesheet" href="/static/labs.css">
+<script src="https://unpkg.com/htmx.org@1.9.12/dist/htmx.min.js"></script>
+</head><body>
+<div class="app">
+<aside class="nav">
+  <a href="/"><img src="/static/brand/labs-lockup-white.svg" alt="Milieu Labs"></a>
+  <div class="proj">Energy strategy</div>
+  {% if p %}
+  <div><div class="tag">Project</div><div>{{ p.name }}</div><div class="note">{{ p.location }}</div></div>
+  <ul class="steps">
+  {% set names = ['Describe the building','Energy demands','Terminal units','Plant scenarios','Compare strategies','Selected strategy'] %}
+  {% for n in range(1,7) %}
+    <li><a href="/p/{{ p.id }}/{{ n }}" class="{{ 'on' if step==n }} {{ 'done' if p.step>n }} {{ 'locked' if n > p.step + 1 and n > 1 }}">
+      <span class="n">{{ '%02d' % n }}</span><span>{{ names[n-1] }}</span></a></li>
+  {% endfor %}
+  </ul>
+  {% endif %}
+  <div class="note" style="margin-top:auto">{{ 'Claude assistance on' if ai_on else 'Claude assistance off (no API key)' }}{% if rates_placeholder %}<br>Placeholder rates in use{% endif %}</div>
+</aside>
+<div class="main">
+<div class="content">{% block content %}{% endblock %}</div>
+<footer><span>Milieu Labs / Energy Strategy</span><span>Milieu Consult Limited</span></footer>
+</div></div></body></html>

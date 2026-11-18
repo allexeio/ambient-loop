@@ -1,0 +1,9 @@
+{% extends "base.html" %}{% block content %}
+<div><div class="tag">STEP 06 — SELECTED STRATEGY</div><h1>{{ title }}</h1>
+<p class="lead">The detailed engineer report, a concise file note, and the GLA calculation summary that substantiates the efficiencies entered in BRUKL.</p></div>
+<div class="panel"><div class="row"><button hx-post="/p/{{ p.id }}/6/build" hx-target="body" hx-indicator="#s6">{{ 'Rebuild' if files else 'Build' }} the reports</button><span id="s6" class="spin note">Building reports and sensitivity runs…</span></div>
+{% if files %}<div class="tw"><table><tbody>
+{% for key, label in [('detailed_report','Detailed engineer report'),('file_note','File note'),('gla_calculation_summary','GLA calculation summary (Energy Statement appendix)')] %}
+<tr><td>{{ label }}</td><td><a href="/p/{{ p.id }}/out/{{ key }}.html" target="_blank">HTML</a></td><td>{% if key in pdfs %}<a href="/p/{{ p.id }}/out/{{ key }}.pdf" target="_blank">PDF</a>{% endif %}</td></tr>{% endfor %}
+</tbody></table></div>{% endif %}</div>
+{% if files %}<iframe class="frame" src="/p/{{ p.id }}/out/gla_calculation_summary.html"></iframe>{% endif %}{% endblock %}

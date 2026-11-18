@@ -74,7 +74,7 @@ class FleetSpec(_S):
     unit_kW: float = 100.0  # rated heating (condenser) output per unit
     sequencing: Literal["lead_lag", "equal_share"] = "lead_lag"
     min_flow_m3s: float | None = None  # per unit, condenser side (rule 4 check)
-    source: Literal["loop", "air", "hr_changeover", "hr_dedicated"] = "loop"  # heating / reheat source
+    source: Literal["loop", "air", "gas", "hr_changeover", "hr_dedicated"] = "loop"  # heating / reheat source
 
 
 class CoolingSpec(FleetSpec):
@@ -114,7 +114,7 @@ class PreheatSpec(_S):
 
 
 class DHWGenSpec(FleetSpec):
-    type: Literal["wshp", "co2", "cascade", "electric"] = "wshp"
+    type: Literal["wshp", "co2", "cascade", "electric", "gas"] = "wshp"
     hr_units: int = 1  # for hr_dedicated
     hr_model: ModelSpec | None = None  # simplified mode only: a fixed COP on the HR source
     intermediate_C: float = 45.0  # cascade
@@ -170,6 +170,10 @@ class Arrangement(_S):
     surplus: list[BalancingSpec] = []
     reuse: bool = True
     pumps_included: bool = True
+    # 2-pipe changeover plant: each hour serves heating OR cooling (the larger); the minority demand
+    # is not met by the plant (heating -> electric backup, cooling -> unmet), and both are flagged
+    changeover: bool = False
+    strategy: dict[str, str] = {}  # studio: {"heat": ..., "cool": ..., "dhw": ..., "balance": ...}
 
     @model_validator(mode="after")
     def _c(self) -> Arrangement:

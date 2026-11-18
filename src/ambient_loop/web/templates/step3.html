@@ -1,0 +1,15 @@
+{% extends "base.html" %}{% block content %}
+<div><div class="tag">STEP 03 — TERMINAL UNITS</div><h1>How is each space heated and cooled?</h1>
+<p class="lead">Proposed from the space types. Change any selection; the temperatures set what the central plant must deliver.</p></div>
+<form class="panel" method="post" action="/p/{{ p.id }}/3">
+<div class="tw"><table><thead><tr><th>Zone</th><th>Terminal</th><th>LTHW °C</th><th>CHW °C</th><th>Why</th></tr></thead><tbody>
+{% for c in choices %}{% set t = terminals[c.terminal] %}<tr><td>{{ c.zone }}<input type="hidden" name="zone" value="{{ c.zone }}"></td>
+<td><select name="terminal">{% for k, tt in terminals.items() %}<option value="{{ k }}" {{ 'selected' if c.terminal==k }}>{{ tt.label }}</option>{% endfor %}</select></td>
+<td><select name="lthw"><option value="">–</option>{% for o in all_lthw %}<option value="{{ o[0] }}/{{ o[1] }}" {{ 'selected' if c.lthw and c.lthw[0]==o[0] and c.lthw[1]==o[1] }}>{{ o[0] }}/{{ o[1] }}</option>{% endfor %}</select></td>
+<td><select name="chw"><option value="">–</option>{% for o in all_chw %}<option value="{{ o[0] }}/{{ o[1] }}" {{ 'selected' if c.chw and c.chw[0]==o[0] and c.chw[1]==o[1] }}>{{ o[0] }}/{{ o[1] }}</option>{% endfor %}</select></td>
+<td class="note">{{ c.why }}{% if t.note %} {{ t.note }}{% endif %}</td></tr>{% endfor %}
+</tbody></table></div>
+<p class="note">Central plant then runs at LTHW {{ '%g'|format(temps.lthw_flow_C) if temps.lthw_flow_C else '–' }}/{{ '%g'|format(temps.lthw_return_C) if temps.lthw_return_C else '–' }} °C and CHW {{ '%g'|format(temps.chw_flow_C) if temps.chw_flow_C else '–' }}/{{ '%g'|format(temps.chw_return_C) if temps.chw_return_C else '–' }} °C (highest heating and lowest cooling requirement).</p>
+<div class="row"><button>Confirm terminals and continue</button>
+{% if ai_on %}<button class="ghost" hx-post="/p/{{ p.id }}/3/review" hx-target="#review" hx-indicator="#rs">Ask Claude to review</button><span id="rs" class="spin note">Reviewing…</span>{% endif %}</div>
+</form><div id="review">{% include "_review.html" %}</div>{% endblock %}

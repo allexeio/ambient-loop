@@ -1,0 +1,10 @@
+id: vrf_cooling
+label: VRF heat recovery system, cooling mode (air-cooled, refrigerant distribution)
+type: carnot
+tag: generic
+eta: 0.40
+approach_evap_K: 2.0
+approach_cond_K: 10.0
+envelope: {src_lvg_C: [2, 20], snk_lvg_C: [-15, 46]}
+part_load: {plr: [0.25, 0.5, 0.75, 1.0], mult: [1.05, 1.12, 1.06, 1.0], plr_min: 0.15, cd: 0.9}
+ref: "Modelled at an equivalent evaporating temperature (source 8 °C), condensing to air with a 10 K approach [A-063]."

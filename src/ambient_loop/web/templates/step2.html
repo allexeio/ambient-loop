@@ -1,0 +1,26 @@
+{% extends "base.html" %}{% block content %}
+<div><div class="tag">STEP 02 — ENERGY DEMANDS</div><h1>Annual demands</h1>
+<p class="lead">Annual energy delivered to each zone, from BRUKL, TM54 or a dynamic model. Blank values can be filled from benchmarks, flagged as assumptions.</p></div>
+<form class="panel" method="post" action="/p/{{ p.id }}/2" enctype="multipart/form-data">
+<div class="tw"><table><thead><tr><th>Zone</th><th class="n">Space heating kWh/yr</th><th class="n">Cooling kWh/yr</th><th class="n">Hot water kWh/yr</th><th class="n">kWh/m² (H / C / DHW)</th></tr></thead><tbody>
+{% for z in p.zones %}<tr><td>{{ z.name }}<div class="note">{{ space_types[z.space_type].label }} · {{ '{:,.0f}'.format(z.area_m2|float) }} m²</div></td>
+<td class="n"><input type="number" step="any" name="heating_kWh" value="{{ z.heating_kWh }}"></td>
+<td class="n"><input type="number" step="any" name="cooling_kWh" value="{{ z.cooling_kWh }}"></td>
+<td class="n"><input type="number" step="any" name="dhw_kWh" value="{{ z.dhw_kWh }}"></td>
+<td class="n note">{% if z.area_m2|float > 0 %}{{ '%.0f'|format(z.heating_kWh|float / z.area_m2|float) }} / {{ '%.0f'|format(z.cooling_kWh|float / z.area_m2|float) }} / {{ '%.0f'|format(z.dhw_kWh|float / z.area_m2|float) }}{% endif %}</td></tr>{% endfor %}
+</tbody></table></div>
+<h3>Fresh air</h3>
+<div class="row"><label>Do the heating and cooling demands include ventilation (fresh-air) load?
+<select name="fa_mode">{% for k, l in [('included','Yes: met by the terminals / included'),('separate','No: AHU loads entered separately'),('estimate','No: estimate the fresh-air load')] %}<option value="{{ k }}" {{ 'selected' if p.fresh_air.mode==k }}>{{ l }}</option>{% endfor %}</select></label>
+<label>AHU heating kWh/yr<input type="number" step="any" name="ahu_heating_kWh" value="{{ p.fresh_air.ahu_heating_kWh }}"></label>
+<label>AHU cooling kWh/yr<input type="number" step="any" name="ahu_cooling_kWh" value="{{ p.fresh_air.ahu_cooling_kWh }}"></label>
+<label>AHU heat recovery<input type="number" step="0.01" name="heat_recovery" value="{{ p.fresh_air.heat_recovery }}"></label></div>
+<h3>Hot water</h3><div class="row"><label>DHW storage °C<input type="number" step="1" name="dhw_store_C" value="{{ p.dhw_store_C }}"></label>
+<label>Circulation losses (share of DHW)<input type="number" step="0.01" name="circulation_fraction" value="{{ p.circulation_fraction }}"></label></div>
+<h3>Hourly data (optional)</h3>
+<p class="note">Upload 8,760-hour output from TAS/IES to replace the synthesised profiles. Column names for each service:</p>
+<div class="row"><label>File<input type="file" name="hourly"></label><label>LTHW column<input name="col_LTHW" value="{{ p.hourly.mapping.LTHW if p.hourly else '' }}"></label>
+<label>CHW column<input name="col_CHW" value="{{ p.hourly.mapping.CHW if p.hourly else '' }}"></label><label>DHW column<input name="col_DHW" value="{{ p.hourly.mapping.DHW if p.hourly else '' }}"></label></div>
+{% if p.hourly %}<p class="note">Using hourly file {{ p.hourly.file }}.</p>{% endif %}
+<div class="row"><button name="action" value="save">Save and continue</button><button class="ghost" name="action" value="bench">Fill blanks from benchmarks</button></div>
+</form>{% endblock %}

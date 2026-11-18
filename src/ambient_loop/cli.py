@@ -195,6 +195,14 @@ def ui(port: int = 8501) -> None:
 
 
 @app.command()
+def web(host: str = "127.0.0.1", port: int = 8000, reload: bool = False) -> None:
+    """Launch the Milieu Labs / Energy Strategy walkthrough web app (data in $MILIEU_DATA)."""
+    import uvicorn
+
+    uvicorn.run("ambient_loop.web.app:app", host=host, port=port, reload=reload)
+
+
+@app.command()
 def departure(project_file: Path, archetype: str = "A1") -> None:
     """Show step by step how full-physics mode departs from the workbook simple mode (brief §9.1)."""
     from ambient_loop.scenarios.run import load_context
